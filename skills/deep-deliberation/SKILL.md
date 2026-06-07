@@ -30,6 +30,12 @@ approach from two independent angles before recommending.
   surviving position wins. No premature consensus.
 - **The orchestrator pushes back.** Between stages, the main agent injects its
   own challenges and recommendations — it is a participant, not a passive router.
+- **Mode-Aware Results Treatment.** Recognize the current Cursor active mode:
+  - **Plan Mode:** Do NOT create, propose, or write formal implementation plans or files (such as `.md` docs or architectural specs) during intermediate stages. The plan should ONLY be created and presented after the entire deep deliberation has completed (after Stage 3 is done), ensuring it is fully informed by all red-teaming phases.
+  - **Agent Mode:** Do NOT create or edit any codebase files during the deliberation stages. Wait until the entire 3-stage deep deliberation has completed and the user has explicitly approved the final recommendation.
+  - **Ask Mode:** Focus purely on deep, conceptual/educational reviews and exploration of existing code. No implementation plans or code changes are proposed.
+- **True Independent Sub-agents.** Each expert or senior-developer persona must be run as an independent sub-agent. Launch each persona as a separate `Task` tool call in parallel to ensure their perspectives remain isolated and truly adversarial.
+- **File-Grounded Context.** Sub-agents must be given sufficient context to perform real-world analysis. The orchestrator must identify and pass specific relevant file paths, directories, and structural context of the codebase into each sub-agent's prompt, directing them exactly where to look.
 
 ## Pipeline overview
 
@@ -39,13 +45,13 @@ USER input (problem / feature / issue / decision)
 [Stage 1] Tree of Thought          (orchestrator)
    🛑 CHECKPOINT 1 — user picks/adjusts a branch
    ↓
-[Stage 2] Expert red-team          (5 persona subagents, readonly)
+[Stage 2] Expert red-team          (5 independent persona subagents, readonly)
    🛑 CHECKPOINT 2 — user reviews findings / steers
    ↓
-[Stage 3] Senior-dev red-team      (5 persona subagents, readonly)
+[Stage 3] Senior-dev red-team      (5 independent persona subagents, readonly)
    🛑 CHECKPOINT 3 — user makes final call
    ↓
-FINAL recommendation + ranked alternatives
+FINAL recommendation + ranked alternatives (with Mode-Specific Output)
 ```
 
 Copy this checklist and track progress out loud:
@@ -54,10 +60,10 @@ Copy this checklist and track progress out loud:
 Progress:
 - [ ] Stage 1: Tree of Thought → recommend branch
 - [ ] CHECKPOINT 1
-- [ ] Stage 2: Expert red-team (5 personas)
+- [ ] Stage 2: Expert red-team (5 independent personas)
 - [ ] CHECKPOINT 2
-- [ ] Stage 3: Senior-dev red-team (5 personas)
-- [ ] CHECKPOINT 3 → final recommendation
+- [ ] Stage 3: Senior-dev red-team (5 independent personas)
+- [ ] CHECKPOINT 3 → final recommendation + mode-specific output
 ```
 
 ---
@@ -98,13 +104,14 @@ Goal: stress-test the **selected branch** from diverse expert angles.
    - Name + role (e.g. "Distributed-systems architect")
    - Skillset, years/level of experience, specific domain knowledge
    - The angle/bias they bring (e.g. security hawk, performance, UX, cost, ops)
-2. **Launch 5 subagents in parallel** — one `Task` call per persona in a single
+2. **Launch 5 independent subagents in parallel** — one `Task` call per persona in a single
    message. Use `subagent_type: "explore"` (readonly, repo-aware) so they ground
    their critique in the real codebase. **Do not pass a `model`.**
-3. Each subagent prompt MUST include: the full problem, the selected branch, the
-   persona definition, repo context, and a demand to **attack first** (failure
+3. **Identify relevant files.** The orchestrator must list specific files and directories in the workspace relevant to this feature or change and include them in the prompt.
+4. Each subagent prompt MUST include: the full problem, the selected branch, the
+   persona definition, specific relevant file paths/context, and a demand to **attack first** (failure
    modes, edge cases, hidden costs) then concede what survives.
-4. **Orchestrator synthesizes**: cluster the attacks, mark which are fatal vs
+5. **Orchestrator synthesizes**: cluster the attacks, mark which are fatal vs
    fixable, note disagreements between experts, and add your own pushback.
 
 Use the subagent prompt template below. Present findings via the Stage 2
@@ -124,12 +131,12 @@ output** and produces the final call.
 
 1. **Design 5 senior-developer personas** (staff/principal level, varied
    specialties — backend, frontend, infra/DevOps, security, product-eng).
-2. **Launch 5 subagents in parallel** (`subagent_type: "explore"`, readonly, no
-   `model`). Feed them: original problem, selected branch, Stage 2 findings, and
+2. **Launch 5 independent subagents in parallel** (`subagent_type: "explore"`, readonly, no
+   `model`). Feed them: original problem, selected branch, Stage 2 findings, specific relevant file paths, and
    the repo. Task them to red-team the *findings and the plan itself* — including
    whether the experts missed something or over-indexed on a risk.
 3. **Orchestrator synthesizes** into a single FINAL recommendation with ranked
-   alternatives, explicit risks, and a concrete next step.
+   alternatives, explicit risks, and a concrete next step, aligned with the active coding mode.
 
 Present via the Final template, then STOP.
 
@@ -151,11 +158,14 @@ domain knowledge]. You bring a [angle/bias] perspective.
 PROBLEM:
 [restated problem]
 
+RELEVANT CODEBASE FILES & ENTRY POINTS:
+[list of specific file paths and directories to explore]
+
 APPROACH UNDER REVIEW:
 [selected branch — and for Stage 3, also the Stage 2 findings]
 
 YOUR TASK (red-team):
-1. Explore the relevant parts of this repository to ground your analysis in the
+1. Explore the relevant parts of this repository (focusing on the files listed above) to ground your analysis in the
    actual code.
 2. ATTACK the approach: failure modes, edge cases, hidden costs, false
    assumptions, maintainability traps, security/perf/ops concerns in your domain.
@@ -227,8 +237,8 @@ Orchestrator pushback: [self-challenge]
 ## Risks & mitigations
 - [risk] → [mitigation]
 
-## Next step
-[one concrete action]
+## Next step (Mode-Specific Action)
+[one concrete action depending on active mode (e.g. draft finalized plan document for Plan Mode, or prepare for implementation for Agent Mode)]
 ```
 
 ---
