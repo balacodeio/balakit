@@ -1,6 +1,9 @@
 ---
 name: marketing-psychology
 description: Apply psychological principles and mental models to Yappi.ai's marketing and product design. Use when designing onboarding flows, landing pages, or feature descriptions to influence user behavior ethically.
+version: "1.0.1"
+author: "Ali Farahat"
+tags: ["marketing-psychology", "mental-models", "behavioral-design", "ethical-influence"]
 ---
 
 # Marketing Psychology & Mental Models

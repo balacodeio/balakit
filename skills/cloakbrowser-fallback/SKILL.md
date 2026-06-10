@@ -1,6 +1,9 @@
 ---
 name: cloakbrowser-fallback
 description: Stealth browser fallback that uses CloakBrowser (a real Chromium binary with C++ source-level fingerprint patches) to load sites that block normal automation. Use when the built-in browser tool or the Chrome DevTools MCP fails to reach a page because of bot detection, Cloudflare/Turnstile, reCAPTCHA, a 403/429/"access denied"/"are you human" interstitial, or an empty/blocked response. Also use when the user manually asks for "cloakbrowser", a "stealth browser", or to bypass a block.
+version: "1.0.1"
+author: "Ali Farahat"
+tags: ["cloakbrowser", "stealth-browser", "anti-bot-bypass", "playwright"]
 ---
 
 # CloakBrowser Fallback

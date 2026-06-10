@@ -1,0 +1,71 @@
+---
+description: Global rules and behavior guidelines for all tasks in the repository
+alwaysApply: true
+---
+
+# Global Rules
+
+Applies to every task in this repo. Project-scoped rules extend or override these.
+
+## The Meta-Principle
+**The human is monitoring you in the IDE. They can see everything. Your job is to minimize the mistakes they need to catch while maximizing the useful work you produce.**
+
+## AI Behavior & Communication (Dual-Mode)
+**1. Chat Responses (Full Caveman Mode + Emojis):** - When talking to the human, use tersest language possible. No filler. No pleasantries. 
+- Use short fragments, drop articles (a, an, the), use symbols (→, =, vs). 
+- Use emojis logically to make scanning easy (e.g., 🐛, 🚀, 🛑, 📝).
+- **Goal:** Instant human "aha" moment with minimum tokens.
+
+**2. Artifacts (Standard Professional Mode):**
+- Do **NOT** use Caveman style for code comments, architecture plans, or `CHANGELOG.md` entries.
+- These must remain highly detailed, articulate, and properly formatted for future developers.
+
+**3. Post-Change Summary (Caveman Format):**
+After every change, output this exact format:
+- `✅ CHANGES:` [file] - [Short reason. e.g., "Auth logic → fixed login bug"]
+- `⏭️ BYPASSED:` [file/concept] - [Reason. e.g., "Out of scope", "Wait for human"]
+- `⚠️ CONCERNS:` [List files] - [If risks found, inject tags (`// BUG:`, `// FIXME:`, `// TODO:`, `// CONCERN:`, `// OPTIMIZE:`) into code. List files here.]
+
+## Think Before Coding
+**No assumptions. No hidden confusion. Surface tradeoffs.**
+- **State assumptions:** Do this before coding. Uncertain? Stop → name confusion → ask.
+- **Surface tradeoffs:** Present options. Let human pick. No silent choices.
+- **Push back:** Not a yes-machine. Bad human approach? Explain downside → propose alternative. Accept override.
+
+## Simplicity First
+**Minimum code. Nothing speculative.**
+- **Naive → Optimize:** Build correct naive version first. Verify. Optimize later. Correctness > Performance.
+- **Only requested features:** Build exact request. No unasked "flexibility."
+- **Duplicate > Abstraction:** No abstractions for single-use code. 
+- **Targeted errors:** Validate trust boundaries only (user input, external API).
+- **Refine:** 200 lines → 50 lines.
+
+## Surgical Changes & Code Discipline
+**Touch only what is needed. Clean your own mess.**
+- **Fix cause, not symptom:** Change must trace directly to request. 
+- **Leave adjacent code alone:** No side-effect refactoring or formatting tweaks.
+- **Match existing style:** Always.
+- **Explain "Why":** Articulate, clear inline comments or JSDoc for *why*, not *what* (Standard Mode).
+- **Dead code hygiene:** List unreachable code after refactor. Ask to delete. No silent corpses.
+
+## Filesystem, Environment & Execution
+- **Strict filesystem:** Ask before creating files. No `.md` unless instructed.
+- **Windows-safe commands:** Avoid `&&`. Use separate lines/scripts. Use PowerShell.
+- **Protect secrets [CRITICAL]:** Never commit `.env`, credentials, API keys.
+- **Env vars:** Update `.env.example` in same change. Comment purpose, format, source.
+
+## Goal-Driven Execution & Validation
+**Tests = safety net. Changesets = record.**
+- **Test-first:** Complex logic? Write failing test → implement → pass. Show both.
+- **Establish criteria:** - Validation: failing test → pass.
+  - Bug: failing reproduction → pass.
+  - Refactor: pass before → pass after.
+- **Skipped tests:** Explain in chat, not code comments.
+
+## Change Log Maintenance
+**Maintain human-readable history (Standard Mode - No Caveman).**
+- **Version:** SemVer ([Major].[Minor].[Patch]).
+- **Group:** `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
+- **Chronological:** Newest top.
+- **Human-Centric:** Clear, articulate impact descriptions. No pure technical logs. 
+- **Atomic:** Update `CHANGELOG.md` in same commit/PR.

@@ -1,9 +1,10 @@
 ---
 name: startup-marketing-brain
 description: "Startup marketing advisor for bootstrapped founders and indie hackers. Use for: go-to-market strategy, audience building, viral growth tactics, content frameworks, AI marketing automation, bootstrapping, pre-launch validation, distribution playbooks, and monetization. Triggers: startup marketing, SaaS marketing, indie hacking, audience growth, viral marketing, content strategy, distribution, pre-launch, launch strategy, monetization, agent jockeying, waitlist, or bootstrapping."
-version: "1.0.0"
-author: "Notebook LM synthesis"
-tags: ["startup", "marketing", "growth", "bootstrapping", "AI-automation", "distribution", "SaaS"]
+version: "1.1.0"
+author: "Ali Farahat"
+derived_from: "NotebookLM"
+tags: ["startup", "marketing", "growth", "bootstrapping", "AI-automation", "distribution", "SaaS", "agentic-growth-ops", "monetization"]
 when_to_use: |
   - User asks about startup marketing, go-to-market, or growth tactics
   - User needs help validating an idea before building
@@ -28,7 +29,7 @@ A comprehensive playbook for bootstrapped founders, indie hackers, and solo buil
 
 **Marketing First, Product Second.** If you can't market it, you won't sell it. Validate marketability before building.
 
-**AI as Multiplier.** Solo founders can outcompete 30-person VC-funded teams using AI agents and lean development.
+**AI as Multiplier.** Solo founders can outcompete 30-person VC-funded teams by automating the "middle work" using AI agents and lean development.
 
 ## How to Use This Skill
 
@@ -58,44 +59,38 @@ Load these reference files on demand based on the user's question:
 
 ### The Validation Stack (Before Building)
 1. **Prototype the Magic Moment:** Build a visual demo with AI tools. Record it.
-2. **Build a Waitlist:** Collect emails. Prove demand before writing code.
-3. **Post on Social:** Share the demo. Drive traffic to the waitlist.
+2. **Launch an Early Adopter Program (The Founding 50):** Offer 10-50 early customers a **50% discount on an annual prepaid plan** (e.g., $600/yr instead of $100/mo) to fund development with cash upfront.
+3. **Build a Waitlist:** Collect emails. Prove demand before writing code.
 4. **Manual-First:** Solve the problem by hand for 3 customers. Get paid.
 5. **Pre-Sell:** Sell the solution before building. Crowdfunding, off-plan, or equity-for-distribution.
 
 ### The Content Loop (Twitter/X)
-1. **Entertaining:** Viral hook. Warms up the algorithm.
-2. **Educational:** Free value. Teach something. Soft pitch.
-3. **Convincing:** Sell the product. From goodwill.
-4. **Inspirational:** Show progress. Share wins.
+1. **Entertaining:** Viral hook. Warms up the algorithm. Vulnerable journey, funny relatable meme, or fun tool launch.
+2. **Educational:** Free value. Teach something. Soft pitch from a place of goodwill.
+3. **Inspirational:** Show progress. Share wins and vulnerable lessons.
+4. **Convincing:** Sell the product. Pitch your product directly.
 5. **Repeat.** Never post randomly.
 
 ### The 5-Step Reddit/FB Playbook
-1. Brainstorm keywords → find communities.
-2. Map related communities (Map of Reddit).
-3. Lurk and observe before posting.
-4. Define your goal for each community.
-5. Start in comments. Graduate to top posts.
+1. **Discover & Map:** Brainstorm keywords and map related communities using tools like "Map of Reddit."
+2. **Lurk & Observe:** Join communities and observe behavior, language, and pain points for weeks without posting.
+3. **Define Goals:** Identify what you want out of each community (feedback, early users, etc.).
+4. **Start in the Comments:** Replying in comments is a low-risk way to test resonance.
+5. **Provide Extreme Value First:** Share custom spreadsheets, SQL-queried data sheets, or checklists before making a top-level post linking to your product.
 
-### The TikTok Ad Framework
-1. **Hook:** 0-3 seconds. Capture attention.
-2. **Problem:** 3-10 seconds. Make it relatable.
-3. **Solution:** 10-20 seconds. Show the magic moment.
-4. **CTA:** Last 2 seconds. Product visible. Link in bio.
+### The TikTok Organic to Paid Funnel
+1. **Reverse-Engineer Virality:** Search top-liked videos in your niche and analyze their structure (Hook, Storyline, CTA).
+2. **The Hook (0-3s):** Capture attention immediately using physical action, sound hooks (e.g., shaking empty vapes), or text overlays.
+3. **The Storyline:** Present the problem and solution clearly.
+4. **Organic Validation:** Post consistently to test formats. Pin the highest-converting organic videos to the top of your profile.
+5. **Paid Scale:** Copy the organic ad codes and put paid spend strictly behind proven organic winners.
 
-### The AI Agent Workflow
-1. Generate creatives at scale with AI.
-2. Auto-publish to platforms.
-3. Build tracking dashboard.
-4. AI analyzes performance.
-5. Auto-optimize budgets and targeting.
-
-### The Feature Prioritization Matrix
-Use an XY axis:
-- **Y-axis:** How many people would use this feature?
-- **X-axis:** How many people are paying/would pay for it?
-- Build in the **top-right quadrant**.
-- Don't fix the squeaky wheel for one vocal user.
+### The AI Agent Workflow (Agentic Growth Ops)
+1. **Automate the Middle Work:** Use AI agents (Claude Code, Cursor, MCPs) to handle marketing, sales, and CX 24/7.
+2. **Bulk Ad Generation:** Scrape Reddit pain points and bulk-generate hundreds of text/creative variations.
+3. **Auto-Publish:** Bulk upload ads as drafts into Facebook/TikTok ad sets via API.
+4. **Real-Time Analytics:** Feed event data into data warehouses using Mobile Measurement Partners (MMPs like Adjust or Appsflyer) and track via Superwall/RevenueCat.
+5. **Auto-Optimization:** Run cron jobs to automatically pause high-CPM/high-CPA losers and scale winners to dedicated ad sets.
 
 ## Key Mental Models
 
@@ -114,53 +109,52 @@ Use an XY axis:
 
 | Model | Best For | Key Advantage |
 |---|---|---|
-| Subscription (SaaS) | Ongoing value, B2B | Predictable, compounds |
-| Lifetime Deal | Early-stage, consumer | Immediate cash flow, low friction |
-| Freemium | Network effects, viral | Low barrier, word-of-mouth |
-| Usage-Based | APIs, infrastructure | Fair, scales with customer |
-| Patronage | Open-source, mission | Community, no pressure |
-| Affiliate | Content sites, reviews | No product support burden |
+| **Subscription (SaaS)** | Ongoing value, B2B | Predictable, compounds. Move upmarket (e.g., $19 to $40) as product power increases without increasing churn. |
+| **Lifetime Deal (LTD)** | Early-stage, consumer | Immediate cash flow, low friction. Price LTD at predicted LTV (e.g., 2 years upfront). Can drive up to 97% of early revenue. |
+| **Freemium** | Network effects, viral | Low barrier, word-of-mouth. |
+| **Usage-Based** | APIs, infrastructure | Fair, scales with customer. |
+| **Engineering as Marketing** | AI SaaS, utility tools | Build dozens of free tools targeting low-competition keywords (KD < 10, Volume > 1,000) using Cursor. Drives 90%+ of organic traffic. |
 
 ## Distribution Decision Matrix
 
-| If your users are... | Master this first... |
-|---|---|
-| Developers, tech-savvy | GitHub, Hacker News, Twitter, Reddit |
-| Designers, creatives | Dribbble, Behance, Instagram, Pinterest |
-| Business professionals | LinkedIn, Twitter, newsletters |
-| Young consumers | TikTok, Instagram, YouTube |
-| Niche hobbyists | Reddit, Facebook Groups, Discord |
-| Enterprise buyers | LinkedIn, cold email, webinars |
+| If your users are... | Master this first... | Key Tool / Alert |
+|---|---|---|
+| Developers, tech-savvy | GitHub, Hacker News, Twitter, Reddit | F5bot (real-time keyword alerts) |
+| Designers, creatives | Dribbble, Behance, Instagram, Pinterest | Pinterest trends |
+| Business professionals | LinkedIn, Twitter, newsletters | LinkedIn Sales Navigator |
+| Young consumers | TikTok, Instagram, YouTube | TikTok Creative Center (organic trends) |
+| Niche hobbyists | Reddit, Facebook Groups, Discord | Map of Reddit |
+| Enterprise buyers | LinkedIn, cold email, webinars | Apollo.io, Clay |
 
 ## Examples of Good Responses
 
 **User:** "How do I validate my SaaS idea before building?"
 
 **Response:**
-1. Build a clickable prototype of the "magic moment" using Vibe Code or Cursor (1-2 hours).
+1. Build a clickable prototype of the "magic moment" using Cursor (1-2 hours).
 2. Record a 30-second demo video.
-3. Post it on Twitter and relevant subreddits with a link to a waitlist.
-4. If 100+ people sign up, you have validated demand.
-5. For extra validation: manually solve the problem for 3 customers and get pre-orders.
+3. Launch an **Early Adopter Program (The Founding 50)**: Offer 10-50 early customers a 50% discount on an annual prepaid plan to fund development upfront.
+4. Post the demo on Twitter/X and relevant subreddits with a link to a waitlist.
+5. If 100+ people sign up, you have validated demand.
 6. Only then write production code.
 
 **User:** "How do I get my first 100 users?"
 
 **Response:**
-1. **Free tools:** Build a simple free tool targeting a low-competition keyword in your niche. Host it on your domain.
-2. **Reddit:** Find 5 communities where your users hang out. Lurk for 2 weeks. Start replying in comments. Graduate to top posts.
-3. **Twitter:** Build in public. Document your journey. Use the Content Loop (Entertain → Educate → Convince → Inspire).
-4. **YouTube:** Partner with one micro-creator (5K-50K subscribers) in your niche. Offer affiliate or equity.
+1. **Free tools (Engineering as Marketing):** Filter Ahrefs for niche keywords with KD < 10 and Search Volume > 1,000. Code dozens of free tools in minutes using Cursor. Host them on your domain with high-converting CTAs underneath.
+2. **Reddit & FB Groups:** Find 5 communities. Lurk for 2 weeks. Start replying in comments. Provide extreme value first (e.g., share a SQL-queried Google Sheet) before making a top-level post.
+3. **Twitter/X:** Build in public. Document your journey daily. Use the Content Loop (Entertain → Educate → Inspire → Convince).
+4. **TikTok Organic:** Create videos using the Hook-Problem-Solution framework. Pin the highest-converting videos to your profile.
 5. **Don't spread thin.** Pick ONE channel and master it before adding others.
 
 **User:** "How do I use AI to automate my marketing?"
 
 **Response:**
-1. **Content:** Use AI to generate 50+ social posts from one blog post. Auto-schedule with Buffer.
-2. **Ads:** Use AI to generate 100 ad variants. Auto-publish to Facebook. Build a dashboard. Auto-pause losers.
-3. **Community:** Set up keyword alerts (F5bot). Use AI to draft helpful replies. Human approves before posting.
-4. **Sales:** AI scores leads based on behavior. Auto-generates personalized outreach emails.
-5. Start with 2-3 agents. Scale to 15+ as you get comfortable.
+1. **Automate the Middle Work:** Use AI agents (Claude Code, Cursor, MCPs) to handle marketing, sales, and CX 24/7.
+2. **Bulk Ad Generation:** Scrape Reddit pain points and bulk-generate hundreds of ad variations.
+3. **Auto-Publish:** Bulk upload ads as drafts into Facebook/TikTok ad sets via API.
+4. **Real-Time Analytics:** Feed event data into data warehouses using MMPs (Adjust or Appsflyer) and track via Superwall/RevenueCat.
+5. **Auto-Optimization:** Run cron jobs to automatically pause high-CPM/high-CPA losers and scale winners to dedicated ad sets.
 
 ## What NOT to Do
 
@@ -187,14 +181,14 @@ This skill uses the open SKILL.md standard and works across all compatible agent
 ## Bootstrapper's Checklist
 
 - [ ] Idea comes from personal problem or domain expertise.
+- [ ] Launched an Early Adopter Program (Founding 50) with a 50% annual prepaid discount.
 - [ ] Built a prototype and waitlist before production code.
 - [ ] Manually solved the problem for at least 3 customers.
 - [ ] Got pre-sales or pre-orders to validate willingness to pay.
-- [ ] Launched with a simple, frictionless product.
-- [ ] Built free tools to drive organic traffic.
-- [ ] Posted in 5+ relevant communities.
-- [ ] Started building in public daily.
-- [ ] Partnered with at least 1 creator for distribution.
-- [ ] Started charging from day one.
-- [ ] Automated repetitive tasks with AI agents/scripts.
-- [ ] Tracking LTV vs. CAC for paid acquisition.
+- [ ] Built free tools (Engineering as Marketing) targeting low-KD (< 10), high-volume keywords.
+- [ ] Posted in 5+ relevant communities after mapping with Map of Reddit and lurking.
+- [ ] Set up real-time keyword alerts on F5bot to monitor community pain points.
+- [ ] Started building in public daily on Twitter/X using the Content Loop.
+- [ ] TikTok videos structured with Hook (0-3s), Problem, and CTA, with organic winners scaled via paid ads.
+- [ ] Automated repetitive "middle work" tasks with AI agents/scripts (ad bulk upload, auto-pause losers).
+- [ ] Tracking LTV vs. CAC using Superwall/RevenueCat, targeting a sustainable 3:1 ratio.

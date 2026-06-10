@@ -5,6 +5,9 @@ description: >-
   phased workflow. Uses web search for up-to-date facts and—when available—delegates broad repo reads to
   an explore subagent before drafting. Use when the user asks for documentation, technical writing,
   doc websites, or readable markdown; or when accuracy, versions, or external APIs matter.
+version: "1.0.1"
+author: "Ali Farahat"
+tags: ["documentation", "technical-writing", "markdown", "research-first"]
 ---
 
 # Documentation Writer

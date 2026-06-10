@@ -1,6 +1,9 @@
 ---
 name: seo-audit
 description: Audit and optimize Yappi.ai for search engines. Use when working on public profile pages, landing pages, or technical SEO improvements.
+version: "1.0.1"
+author: "Ali Farahat"
+tags: ["seo-audit", "local-seo", "yappi-seo", "structured-data"]
 ---
 
 # SEO Audit & Optimization
@@ -24,5 +27,5 @@ Our primary SEO surface area is the **Public Profile Pages** (`yappi.ai/p/[slug]
 
 ## References
 
-- [AEO & GEO Patterns](references/aeo-geo-patterns.md): Optimization for AI and generative search.
-- [AI Writing Detection](references/ai-writing-detection.md): Ensuring content quality.
+- [AEO & GEO Patterns](../everything-seo/references/semantic_intent.md): Optimization for AI and generative search.
+- [AI Writing Detection](../everything-seo/references/content_automation.md): Ensuring content quality.
