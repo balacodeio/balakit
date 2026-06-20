@@ -1,7 +1,7 @@
 # balakit
 
-[![npm](https://img.shields.io/npm/v/@balacodeio/balakit)](https://www.npmjs.com/package/@balacodeio/balakit)
-[![license](https://img.shields.io/npm/l/@balacodeio/balakit)](LICENSE)
+[![npm](https://img.shields.io/npm/v/balakit)](https://www.npmjs.com/package/balakit)
+[![license](https://img.shields.io/npm/l/balakit)](LICENSE)
 
 **Opinionated, cross-agent rules and skills for AI coding agents.** One `npx`
 command installs the rules and skills you pick into **Cursor, Claude Code,
@@ -22,11 +22,10 @@ An interactive menu lets you choose **what** (rules and/or skills), **which**
 (per rule / per skill), **where** (which agents), and **scope** (this project or
 global). No clone, no manual copying.
 
-Equivalent invocations — all run the same installer:
+Or run it straight from GitHub without npm:
 
 ```bash
-npx @balacodeio/balakit          # scoped package name
-npx github:balacodeio/balakit    # straight from GitHub, no npm needed
+npx github:balacodeio/balakit
 ```
 
 ## What gets installed where
