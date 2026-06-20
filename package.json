@@ -1,14 +1,18 @@
 {
-  "name": "my-awesome-ai",
-  "version": "1.0.0",
-  "description": "Personal Cursor agent skills and rules — compatible with skills.sh",
+  "name": "@balacodeio/balakit",
+  "version": "1.1.0",
+  "description": "Opinionated, cross-agent rules and skills for AI coding agents — one npx install into Cursor, Claude Code, Codex, OpenCode & Copilot.",
   "license": "MIT",
+  "homepage": "https://github.com/balacodeio/balakit#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/afaraha8403/my-awesome-ai.git"
+    "url": "git+https://github.com/balacodeio/balakit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/balacodeio/balakit/issues"
   },
   "bin": {
-    "my-awesome-ai": "./bin/cli.js"
+    "balakit": "bin/cli.mjs"
   },
   "files": [
     "bin",
@@ -20,11 +24,33 @@
   "engines": {
     "node": ">=18"
   },
+  "dependencies": {
+    "@clack/prompts": "^1.6.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
-    "cursor",
-    "agent-skills",
-    "skills.sh",
     "ai",
-    "rules"
+    "ai-agents",
+    "agent-skills",
+    "agent-rules",
+    "coding-standards",
+    "cursor",
+    "cursor-rules",
+    "claude-code",
+    "claude",
+    "codex",
+    "opencode",
+    "github-copilot",
+    "copilot",
+    "skills",
+    "rules",
+    "agents-md",
+    "mdc",
+    "npx",
+    "cli",
+    "developer-tools",
+    "skills-sh"
   ]
 }

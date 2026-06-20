@@ -1,0 +1,64 @@
+---
+description: Maintain CHANGELOG.md for significant changes; grouped by type (Features, Fixes, Changes); source for GitHub release notes
+alwaysApply: true
+---
+
+# Changelog maintenance
+
+## When to update
+
+Update `CHANGELOG.md` (at project root) whenever you or the user:
+
+- Add a **new feature**
+- Ship a **significant fix** (bug fix that affects behavior or correctness)
+- Make a **notable change** (refactor, config, dependency, or UX change worth documenting)
+- Remove or deprecate something user-facing
+
+Do **not** add trivial edits (typos, comment-only, formatting-only) unless the user asks.
+
+## Format (grouped by type)
+
+- **Unreleased at top.** The first section is `## [Unreleased]` for changes not yet in a release.
+- **Released versions below.** Each release has a section `## [vX.Y.Z]` or `## [X.Y.Z]` (e.g. `## [v0.0.1-beta.7]`, `## [1.0.0]`). Use the exact version string that will be tagged (with or without leading `v`).
+- **Newest release first** under Unreleased. When you cut a release, the previous `[Unreleased]` content can be moved under a new `## [vX.Y.Z]` section.
+- **Group by type.** Within each version section, organize entries under three subsections: `### Features`, `### Fixes`, `### Changes`.
+- **No type prefix.** Items do not need `**Feature:**`, `**Fix:**`, or `**Change:**` prefixes since they are grouped by section.
+- One line per item; keep text concise.
+
+Structure:
+
+```markdown
+# Changelog
+
+## [Unreleased]
+
+### Features
+- Short description of new feature.
+- Another feature.
+
+### Fixes
+- Bug fix description.
+- Another fix.
+
+### Changes
+- Refactor or UX change description.
+
+## [v0.0.1-beta.7]
+
+### Features
+- Something shipped in this version.
+
+### Changes
+- Another change.
+
+## [v0.0.1-beta.6]
+- ...
+```
+
+## Releases and GitHub
+
+When a tag is pushed (e.g. `v0.0.1-beta.8`), the release workflow (`.github/workflows/release.yml`) looks in `CHANGELOG.md` for a section whose heading is `## [v0.0.1-beta.8]` or `## [0.0.1-beta.8]`. If found, that section (including the heading) is used as the draft release body. If not found, the release still succeeds and uses a default line. Adding a version section before tagging is optional but recommended so the release notes are populated.
+
+## If the file is missing
+
+If `CHANGELOG.md` does not exist, create it with a title, an `## [Unreleased]` section, and add the relevant entry/entries.

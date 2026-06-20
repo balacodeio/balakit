@@ -1,0 +1,55 @@
+---
+description: Guidelines for code comments and JSDoc documentation
+alwaysApply: true
+---
+
+# Comments & JSDoc
+
+## Default to zero comments
+
+Names document code. Add an inline comment only when the WHY is non-obvious:
+
+- A hidden constraint not visible in the code.
+- A subtle invariant a reader might violate.
+- A workaround for a specific bug (link the upstream issue).
+- Behavior a competent reader would find surprising.
+
+If removing the comment wouldn't confuse a future reader, delete it.
+
+## Never write
+
+- Restatements of the code — `// increment counter` above `counter++`.
+- Task / ticket references — `// added for CAN-123`, `// fixes billing bug`.
+- Caller references — `// used by contacts router`.
+- Change history — `// was async before`, `// removed old logic`.
+- Commented-out code.
+- Banner comments — `// === SECTION ===`.
+
+## Authorized Tracking Tags (Exception)
+
+You MUST use the following authorized tags to track technical debt and risks (as required by the Global Rules). These should cleanly describe the issue for IDE tracking:
+- `// BUG:` - For critical, immediate issues.
+- `// FIXME:` - For broken code or technical debt needing refactor.
+- `// TODO:` - For general planned work.
+- `// CONCERN:` - For edge cases or architectural risks.
+- `// OPTIMIZE:` - For performance improvements or clean-up tasks.
+
+## JSDoc is required on every exported symbol
+
+Exported functions, types, classes, constants, and enums all need a JSDoc block.
+Non-exported helpers only get JSDoc when the WHY is non-obvious.
+
+- Line 1 is a one-sentence summary ending with a period.
+- `@param` only when the parameter name isn't self-explanatory. Never restate the TypeScript type.
+- `@returns` only when the return isn't obvious from the function name.
+- `@throws {ErrorType}` for every domain error the function can throw — this feeds the OpenAPI error schemas.
+- `@example` on non-trivial tRPC procedures and shared utilities.
+- Never use `@type`, `@typedef`, or typed `@returns {Foo}` — TypeScript replaces them.
+
+## OpenAPI-surfaced docs
+
+REST OpenAPI is generated from Zod schemas and tRPC metadata. **These strings ship to external consumers** — write them for API users, not just your team.
+
+- Every Zod field uses `.describe('...')` with a short user-facing sentence. 
+- tRPC procedure JSDoc maps to OpenAPI `summary`/`description`.
+- REST route definitions declare `summary`, `description`, and at least one response example.
