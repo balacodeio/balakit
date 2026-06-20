@@ -177,13 +177,16 @@ function installRules(rules, agentIds, scope) {
   return { written, skipped };
 }
 
+/** Our agent ids → skills.sh agent ids (differ only where skills.sh disagrees). */
+const SKILLS_SH_AGENT = { copilot: "github-copilot" };
+
 /** Build the equivalent `npx skills add` command for the chosen selection. */
 function skillsCommand(skillNames, agentIds, scope) {
   return [
     "npx -y skills add",
     REPO,
     ...skillNames.map((s) => `-s ${s}`),
-    ...agentIds.map((a) => `-a ${a}`),
+    ...agentIds.map((a) => `-a ${SKILLS_SH_AGENT[a] ?? a}`),
     scope === "global" ? "-g" : "",
     "-y",
   ]

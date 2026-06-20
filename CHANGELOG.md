@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.1.1]
+
 ### Features
 - Added a one-command interactive installer: `npx balakit` (or `npx github:balacodeio/balakit`). Built on `@clack/prompts`, it lets you choose which rules and skills to install, which agents to target (Cursor, Claude Code, Codex, OpenCode, GitHub Copilot), and whether to install per-project or globally. Rules are installed natively — Cursor `.mdc` files written verbatim, and an idempotent managed block merged into `CLAUDE.md` / `AGENTS.md` that preserves any surrounding content — while skills are delegated to skills.sh so its maintained per-agent paths are reused. This fills the gap skills.sh leaves open (it installs skills only, never rule files) and replaces the previous manual "copy rules by hand" step.
 - Added a new `authoring-skills-and-rules` skill (`skills/authoring-skills-and-rules/SKILL.md`): a meta-skill that guides creating and updating agent Skills (`SKILL.md`) and rules/instructions across five platforms — Claude Code, Cursor, OpenCode, Codex, and GitHub Copilot. Includes a Skill-vs-rule decision model, a cross-platform support matrix (exact file locations and frontmatter per platform), the universal authoring craft (trigger-rich descriptions, progressive disclosure, naming, size budgets, what to omit), create/update workflows, a validation checklist, and six on-demand `references/` files (one per platform plus a write-once-run-everywhere cross-platform strategy). Built from authoritative 2025-2026 documentation for each platform.
@@ -25,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed the bundled installer CLI (`bin/cli.js`, the `my-awesome-ai` bin entry in `package.json`, and its README section). Skills now install exclusively via [skills.sh](https://skills.sh/) (`npx skills`), and rules are copied manually into `.cursor/rules/`.
 
 ### Fixes
+- Fixed the installer's skills.sh delegation passing the agent id `copilot` instead of `github-copilot`. skills.sh rejects unknown agent ids and aborts the entire command, so selecting GitHub Copilot previously prevented *all* skills from installing. (Supersedes the unlisted 1.1.0 npm publish, which shipped this bug.)
 - Corrected the `authoring-skills-and-rules` skill after verifying each platform's behavior against its official 2025-2026 docs. GitHub Copilot **does** support Agent Skills (`SKILL.md`) as of December 18, 2025 and auto-discovers them from `.github/skills/`, `.claude/skills/`, and `.agents/skills/` — the earlier "Copilot has no Skills" claim was wrong. Updated the cross-platform support matrix in `SKILL.md`, `references/copilot.md`, and `references/cross-platform.md`, and added the Claude Code `@import` (4-hop max) and `.claude/rules/*.md` path-scoped rule facts to `references/claude-code.md`.
 - Fixed broken reference links in the `seo-audit` skill by pointing them directly to the canonical `everything-seo` reference files instead of creating duplicate parallel files.
 
