@@ -5,7 +5,8 @@
 
 **Opinionated, cross-agent rules and skills for AI coding agents.** One `npx`
 command installs the rules and skills you pick into **Cursor, Claude Code,
-Codex, OpenCode, and GitHub Copilot** — per-project or globally.
+Codex, OpenCode, and GitHub Copilot**. Rules install into the current project;
+skills can be installed per-project or globally.
 
 > These are *opinionated* defaults: a meta-principle, a dual-mode communication
 > style, a simplicity ladder, surgical-change discipline — plus a library of
@@ -19,7 +20,8 @@ npx balakit
 ```
 
 An interactive menu lets you choose **what** (rules and/or skills), **which**
-(per rule / per skill), **where** (which agents), and **scope** (this project or
+(per rule / per skill), and **where** (which agents). Rules always install into
+the current project; for skills you also pick a **scope** (this project or
 global). No clone, no manual copying.
 
 Or run it straight from GitHub without npm:
@@ -40,7 +42,7 @@ Rules are agent-specific in both format and location; the installer handles each
 
 - **Idempotent** — re-running replaces the managed block between markers; it never duplicates or clobbers your own content.
 - **Self-contained** — glob-scoped rules carry their scope note inline, so merged files never point at files you don't have.
-- **Global scope** — supported for Claude Code (`~/.claude/CLAUDE.md`), Codex (`~/.codex/AGENTS.md`), and OpenCode. Cursor and Copilot are project-only (no global rules file).
+- **Project-only** — rules always install into the current repo. They describe how to work in *this* project and belong under version control, so installing them globally (and silently applying one project's conventions everywhere) is intentionally not offered. Only **skills** can be installed globally.
 
 **Skills** are delegated to [skills.sh](https://skills.sh/): the installer runs
 `npx skills add` under the hood, so its maintained per-agent paths and global

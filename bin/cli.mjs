@@ -22,7 +22,6 @@ import {
   existsSync,
 } from "node:fs";
 import { join, dirname, basename, relative } from "node:path";
-import { homedir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import * as p from "@clack/prompts";
@@ -82,7 +81,6 @@ const allSkills = readdirSync(SKILLS_DIR, { withFileTypes: true })
 /** Demote every Markdown heading one level so rule bodies nest under our H1. */
 const demote = (md) => md.replace(/^(#{1,5}) /gm, "#$1 ");
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const expand = (pp) => (pp.startsWith("~") ? join(homedir(), pp.slice(1)) : pp);
 const rel = (f) => {
   const r = relative(process.cwd(), f);
   return !r || r.startsWith("..") ? f : r;
@@ -124,38 +122,36 @@ function mergeManaged(file, content) {
   }
 }
 
-/** Resolve where a given agent's rules live for the chosen scope. */
-function ruleTarget(agentId, scope, cwd) {
-  const global = scope === "global";
+/**
+ * Resolve where a given agent's rules live. Rules are always project-scoped:
+ * they describe how to work in *this* repo and belong under version control, so
+ * a global install would silently apply one project's conventions everywhere.
+ * Skills remain installable globally (delegated to skills.sh).
+ */
+function ruleTarget(agentId, cwd) {
   switch (agentId) {
     case "cursor":
-      return global
-        ? { unsupported: "Cursor global rules live in Settings → Rules (not files) — install per-project." }
-        : { kind: "mdc", dir: join(cwd, ".cursor", "rules") };
+      return { kind: "mdc", dir: join(cwd, ".cursor", "rules") };
     case "claude-code":
-      return { kind: "merge", file: global ? expand("~/.claude/CLAUDE.md") : join(cwd, "CLAUDE.md") };
+      return { kind: "merge", file: join(cwd, "CLAUDE.md") };
     case "codex":
-      return { kind: "merge", file: global ? expand("~/.codex/AGENTS.md") : join(cwd, "AGENTS.md") };
     case "opencode":
-      return { kind: "merge", file: global ? expand("~/.config/opencode/AGENTS.md") : join(cwd, "AGENTS.md") };
     case "copilot":
-      return global
-        ? { unsupported: "Copilot has no global rules file — install per-project (AGENTS.md)." }
-        : { kind: "merge", file: join(cwd, "AGENTS.md") };
+      return { kind: "merge", file: join(cwd, "AGENTS.md") };
     default:
       return { unsupported: `Unknown agent: ${agentId}` };
   }
 }
 
-/** Install selected rules for selected agents; returns what was written/skipped. */
-function installRules(rules, agentIds, scope) {
+/** Install selected rules for selected agents into this project; returns what was written/skipped. */
+function installRules(rules, agentIds) {
   const cwd = process.cwd();
   const block = renderRulesBlock(rules);
   const written = [];
   const skipped = [];
   const mergedFiles = new Set();
   for (const a of agentIds) {
-    const t = ruleTarget(a, scope, cwd);
+    const t = ruleTarget(a, cwd);
     if (t.unsupported) {
       skipped.push(`${a}: ${t.unsupported}`);
       continue;
@@ -246,22 +242,25 @@ async function main() {
   });
   if (p.isCancel(agents)) return p.cancel("Cancelled.");
 
-  const scope = await p.select({
-    message: "Install where?",
-    initialValue: "project",
-    options: [
-      { value: "project", label: "This project", hint: process.cwd() },
-      { value: "global", label: "Global (user-level)", hint: "Claude Code / Codex / OpenCode; Cursor & Copilot are project-only" },
-    ],
-  });
-  if (p.isCancel(scope)) return p.cancel("Cancelled.");
+  // Rules are always project-scoped; only skills offer a global install (via skills.sh).
+  let skillsScope = "project";
+  if (selectedSkills.length) {
+    skillsScope = await p.select({
+      message: "Install skills where?",
+      initialValue: "project",
+      options: [
+        { value: "project", label: "This project", hint: process.cwd() },
+        { value: "global", label: "Global (user-level)", hint: "via skills.sh" },
+      ],
+    });
+    if (p.isCancel(skillsScope)) return p.cancel("Cancelled.");
+  }
 
   p.note(
     [
-      selectedRules.length ? `Rules:  ${selectedRules.map((r) => r.name).join(", ")}` : null,
-      selectedSkills.length ? `Skills: ${selectedSkills.join(", ")}` : null,
+      selectedRules.length ? `Rules:  ${selectedRules.map((r) => r.name).join(", ")} (project)` : null,
+      selectedSkills.length ? `Skills: ${selectedSkills.join(", ")} (${skillsScope})` : null,
       `Agents: ${agents.join(", ")}`,
-      `Scope:  ${scope}`,
     ]
       .filter(Boolean)
       .join("\n"),
@@ -273,14 +272,14 @@ async function main() {
   if (selectedRules.length) {
     const s = p.spinner();
     s.start("Installing rules");
-    const { written, skipped } = installRules(selectedRules, agents, scope);
+    const { written, skipped } = installRules(selectedRules, agents);
     s.stop(`Rules installed (${written.length} file${written.length === 1 ? "" : "s"})`);
     if (written.length) p.note(written.join("\n"), "Wrote");
     if (skipped.length) p.note(skipped.join("\n"), "Skipped");
   }
 
   if (selectedSkills.length) {
-    const cmd = skillsCommand(selectedSkills, agents, scope);
+    const cmd = skillsCommand(selectedSkills, agents, skillsScope);
     p.log.step(`Installing skills via skills.sh:\n${cmd}`);
     const result = spawnSync(cmd, { stdio: "inherit", shell: true });
     if (result.status !== 0) {

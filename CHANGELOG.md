@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.0]
+
+### Changes
+- Made the bundled rules language- and project-agnostic so the kit is a genuine drop-in for any repository. The `testing` rule no longer assumes a specific stack (previously referenced a named monorepo, tRPC, Cloudflare Workers, a specific component library, and a specific QA tool); it now states the same opinionated philosophy — tests must prevent a real user-facing bug, integration over unit, failing-test-first for bug fixes, no speculative E2E — in stack-neutral terms. The `comments` rule was broadened from "Comments & JSDoc" to "Comments & Documentation": the opinionated stance (zero comments by default, document the *why*, document every exported symbol, externally-surfaced docs ship to consumers) is preserved, but the guidance no longer hard-codes TypeScript/JSDoc and instead defers to each language's doc-comment convention. The `changelog` rule's release section no longer assumes a specific GitHub Actions workflow file. The rules remain opinionated by design — only the language- and project-specific bindings were removed.
+
+### Removed
+- Removed the ability to install **rules** globally. Rules describe how to work in a specific repository and belong under version control, so a global install would silently apply one project's conventions everywhere. The installer now always writes rules into the current project (Cursor `.cursor/rules/`, Claude Code `CLAUDE.md`, and Codex/OpenCode/Copilot `AGENTS.md`). **Skills** are unaffected and can still be installed per-project or globally via skills.sh — the scope prompt now appears only when skills are selected and applies to skills alone. Removed the now-dead global-path resolution (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, etc.) and the unused `expand`/`homedir` helpers from the CLI.
+
 ## [v1.1.1]
 
 ### Features

@@ -143,14 +143,14 @@ Structure:
 
 ### Releases and GitHub
 
-When a tag is pushed (e.g. `v0.0.1-beta.8`), the release workflow (`.github/workflows/release.yml`) looks in `CHANGELOG.md` for a section whose heading is `## [v0.0.1-beta.8]` or `## [0.0.1-beta.8]`. If found, that section (including the heading) is used as the draft release body. If not found, the release still succeeds and uses a default line. Adding a version section before tagging is optional but recommended so the release notes are populated.
+If the project uses a tag-triggered release workflow, it typically looks in `CHANGELOG.md` for a section whose heading matches the pushed tag (e.g. `## [v1.2.3]` or `## [1.2.3]`) and uses that section as the release notes body. Add the version section before tagging so the release notes are populated; if it's missing, the release should still succeed with a default body.
 
 ### If the file is missing
 
 If `CHANGELOG.md` does not exist, create it with a title, an `## [Unreleased]` section, and add the relevant entry/entries.
 
 <!-- from rules/comments.mdc -->
-## Comments & JSDoc
+## Comments & Documentation
 
 ### Default to zero comments
 
@@ -165,41 +165,40 @@ If removing the comment wouldn't confuse a future reader, delete it.
 
 ### Never write
 
-- Restatements of the code — `// increment counter` above `counter++`.
-- Task / ticket references — `// added for CAN-123`, `// fixes billing bug`.
-- Caller references — `// used by contacts router`.
-- Change history — `// was async before`, `// removed old logic`.
+- Restatements of the code — `increment counter` above `counter++`.
+- Task / ticket references — `added for CAN-123`, `fixes billing bug`.
+- Caller references — `used by the contacts module`.
+- Change history — `was async before`, `removed old logic`.
 - Commented-out code.
-- Banner comments — `// === SECTION ===`.
+- Banner comments — `=== SECTION ===`.
 
 ### Authorized Tracking Tags (Exception)
 
-You MUST use the following authorized tags to track technical debt and risks (as required by the Global Rules). These should cleanly describe the issue for IDE tracking:
-- `// BUG:` - For critical, immediate issues.
-- `// FIXME:` - For broken code or technical debt needing refactor.
-- `// TODO:` - For general planned work.
-- `// CONCERN:` - For edge cases or architectural risks.
-- `// OPTIMIZE:` - For performance improvements or clean-up tasks.
+You MUST use the following authorized tags to track technical debt and risks (as required by the Global Rules), using your language's comment syntax. These should cleanly describe the issue for IDE tracking:
+- `BUG:` — For critical, immediate issues.
+- `FIXME:` — For broken code or technical debt needing refactor.
+- `TODO:` — For general planned work.
+- `CONCERN:` — For edge cases or architectural risks.
+- `OPTIMIZE:` — For performance improvements or clean-up tasks.
 
-### JSDoc is required on every exported symbol
+### Document every exported symbol
 
-Exported functions, types, classes, constants, and enums all need a JSDoc block.
-Non-exported helpers only get JSDoc when the WHY is non-obvious.
+Every part of a module's public surface — exported functions, types, classes, constants — gets a documentation comment in your language's convention (doc comment, docstring, etc.). Internal/private helpers only get one when the WHY is non-obvious.
 
-- Line 1 is a one-sentence summary ending with a period.
-- `@param` only when the parameter name isn't self-explanatory. Never restate the TypeScript type.
-- `@returns` only when the return isn't obvious from the function name.
-- `@throws {ErrorType}` for every domain error the function can throw — this feeds the OpenAPI error schemas.
-- `@example` on non-trivial tRPC procedures and shared utilities.
-- Never use `@type`, `@typedef`, or typed `@returns {Foo}` — TypeScript replaces them.
+- The first line is a one-sentence summary ending with a period.
+- Document a parameter only when its name isn't self-explanatory. Never restate information the signature already carries (e.g. the type, in a typed language).
+- Document the return only when it isn't obvious from the function name.
+- Document every error/exception the function can raise as part of its contract.
+- Add an example for non-trivial public APIs and shared utilities.
+- Don't duplicate what the language already expresses — let the type system, signatures, and tooling do their job.
 
-### OpenAPI-surfaced docs
+### Externally-surfaced docs
 
-REST OpenAPI is generated from Zod schemas and tRPC metadata. **These strings ship to external consumers** — write them for API users, not just your team.
+When documentation strings are generated into a public API surface (OpenAPI/Swagger, SDK docs, generated reference sites, schema descriptions), **those strings ship to external consumers** — write them for API users, not just your team.
 
-- Every Zod field uses `.describe('...')` with a short user-facing sentence. 
-- tRPC procedure JSDoc maps to OpenAPI `summary`/`description`.
-- REST route definitions declare `summary`, `description`, and at least one response example.
+- Describe every public field/parameter with a short user-facing sentence.
+- Map each endpoint/handler summary to the generated summary and description.
+- Declare at least one example response for each public route.
 
 <!-- from rules/testing.mdc -->
 ## Testing
@@ -208,69 +207,49 @@ REST OpenAPI is generated from Zod schemas and tRPC metadata. **These strings sh
 
 Every test must earn its place by preventing a bug that would affect users. Do not write tests to hit a coverage number. If you cannot explain what bug a test would catch, do not write it.
 
-Favor integration tests over unit tests. Test real code paths — a tRPC procedure that validates input, queries the database, and returns a response. Reserve unit tests for complex business logic: pricing calculations, date handling, permission resolution. Do not write unit tests for glue code or tests that mock everything away.
+Favor integration tests over unit tests. Test real code paths — input validated, work performed, result returned. Reserve unit tests for complex business logic: pricing calculations, date handling, permission resolution. Do not write unit tests for glue code or tests that mock everything away.
 
 ### Folder Convention
 
-All tests live under `tests/` at the repo root, mirroring the source structure:
+Mirror the source structure under a single top-level tests location (or your framework's convention), separating tiers clearly:
 
-- `tests/unit/` — Unit tests (complex business logic only).
-- `tests/integration/` — Integration tests (the default tier for most behavior).
-- `tests/e2e/` — End-to-end tests (Playwright).
+- Unit tests — complex business logic only.
+- Integration tests — the default tier for most behavior.
+- End-to-end tests — full-stack flows.
+
+Follow whatever layout the project already uses; do not impose a new one mid-project.
 
 ### Tooling
 
-- **Unit + integration:** Vitest (with `@cloudflare/vitest-pool-workers` for Workers repos).
-- **UI component and page testing:** Vitest + React Testing Library (Next.js repos).
-- **Visual regression:** Chromatic + Storybook (canopy-ui only).
-- **End-to-end:** Playwright (run against deployed staging, not localhost).
-- **QA no-code E2E:** Reflect (AI self-healing, no-code recorder, cloud-hosted, no local setup).
-- **STRICT RULE:** Do not introduce additional test frameworks without team agreement.
+- Use the test runner the project already adopts. Do not introduce an additional test framework without team agreement.
+- Match the existing assertion style, fixtures, and mocking approach.
+- Keep end-to-end tests pointed at a deployed/staging-like environment rather than hard-coded local URLs when the project's flow expects that.
 
 ### When to Write Tests
 
 A behavior change in a PR requires a test that exercises that behavior. "Behavior change" means: what the user sees or what the API returns is different. Refactors that preserve behavior do not require new tests — existing tests should still pass.
 
-**Bug Fixes:** Write the failing test first. The test is the proof the bug existed and that the fix works.
+**Bug fixes:** Write the failing test first. The test is the proof the bug existed and that the fix works.
 
-### End-to-End Tests (Playwright)
+### End-to-End Tests
 
-E2E tests do not run locally. The CI sequence is:
+E2E tests are often slow and run against a deployed environment rather than locally. Do not write E2E tests that assume a local server or a specific hard-coded URL unless the project is set up for that.
 
-1. PR checks pass in GitHub Actions (lint, typecheck, unit, integration).
-2. Code merges to staging and is deployed.
-3. GitHub Action automatically runs the Playwright smoke suite against the staging URL.
-4. QA triggers additional Playwright suites via `workflow_dispatch` or uses Reflect.
-
-Do not write E2E tests that assume a local server or a specific URL — they always run against the deployed staging environment. Results publish to Allure Report on GitHub Pages.
-
-### Reflect Suites (QA no-code E2E)
-
-QA creates and maintains Reflect tests in the cloud — no code lives in the repo. Suites follow the naming convention `{app}-{env}-{scope}`:
-
-- `web-stg-` / `web-prd-` — canopy-core-web
-- `platform-stg-` / `platform-prd-` — canopy-platform-admin
-- `mobile-stg-` / `mobile-prd-` — mobile apps (Expo)
-- `etl-stg-` / `etl-prd-` — data-queries, history-logging
-
-Production suites are a subset of staging (critical smoke tests only). Each repo's deploy workflow triggers all Reflect suites matching its app + environment prefix via the Reflect API.
-
-### E2E Test Authoring — Proactive Prompt
-
-Do not write E2E tests speculatively. Only write them after the user confirms the feature is done. When a feature implementation appears complete, proactively ask the user using the Global Rules Caveman format:
-- *"Feature done? Write Playwright E2E?"*
+Do not write E2E tests speculatively. Only write them after the user confirms the feature is done. When a feature implementation appears complete, proactively ask the user (Caveman format):
+- *"Feature done? Write E2E?"*
 
 ### Secrets [CRITICAL]
 
-Never commit API keys, tokens, passwords, or database URLs in any file — including `wrangler.toml`, `.env`, source code, or test fixtures. 
-- Use `.dev.vars` locally.
-- Use `wrangler secret put` for deployed environments. 
-- `gitleaks` runs in pre-commit hooks and CI to enforce this automatically.
+Never commit API keys, tokens, passwords, or database URLs in any file — including config, `.env`, source code, or test fixtures.
+- Use local-only secret files (e.g. `.env.local`, `.dev.vars`) that are gitignored.
+- Use the platform's secret manager for deployed environments.
+- Prefer an automated secret scanner (e.g. `gitleaks`) in pre-commit hooks and CI to enforce this.
 
 ### Skipping Tests
 
-If you skip tests, say so in chat with the reason — never in a code comment. 
-**Acceptable reasons:** 1. The path is provably unreachable.
+If you skip tests, say so in chat with the reason — never in a code comment.
+**Acceptable reasons:**
+1. The path is provably unreachable.
 2. An existing test already covers the exact behavior.
 3. The human explicitly overrode the test requirement.
 
