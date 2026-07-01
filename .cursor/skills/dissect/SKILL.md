@@ -11,7 +11,7 @@ description: >-
   system, schema, or plan.
 user-invocable: true
 disable-model-invocation: false
-version: "2.0.0"
+version: "2.1.0"
 author: "Ali Farahat"
 tags: ["dissect", "audit", "red-team", "minimal-build", "refactor", "ground-truth", "orchestration"]
 when_to_use: |
@@ -36,6 +36,10 @@ when_to_use: |
 ---
 
 # Dissect
+
+> **Leading words:** dissect, ground truth, entity-level, minimal-build,
+> red-team, evidence-backed, stub detection, naming audit, fold test,
+> phase separation.
 
 Systematically interrogate and optimize an existing service, written plan, or
 system. The goal is not to rubber-stamp the current design — it is to arrive at
@@ -212,31 +216,16 @@ system-level stage. Wait for the answer.
 
 ## Dynamic verdict taxonomy
 
-`KEEP / FOLD / DROP` is too rigid — it only fits relational tables. A dissection
-target may be a written plan, a runtime flow, or a coupled module, so verdicts are
-**action-oriented and target-aware**. Pick the most precise verdict; each must
-cite evidence (file:line or live DB), never row count.
+`KEEP / FOLD / DROP` is too rigid — it only fits relational tables. A
+dissection target may be a written plan, a runtime flow, or a coupled module,
+so verdicts are **action-oriented and target-aware**. The full taxonomy
+(KEEP, FOLD, DROP, DEFER, ON-DEMAND, EXTRACT, RE-HOME, REFACTOR,
+OUT-OF-SCOPE) with meanings, plan-vs-code typicals, and the distinctions
+that matter (RE-HOME vs EXTRACT, DEFER vs DROP, ON-DEMAND vs KEEP) lives in
+[references/verdict_taxonomy.md](references/verdict_taxonomy.md).
 
-| Verdict | Meaning | Typical on a PLAN | Typical on EXISTING CODE/DB |
-|---|---|---|---|
-| **KEEP** | Correct and load-bearing as-is. | Approved in spec. | Active, correct logic. |
-| **FOLD** | Absorb into a parent (columns or JSONB). | Merge planned entities. | Schema normalization cleanup. |
-| **DROP** | Remove entirely. | Descope the feature. | Delete dead/unused code. |
-| **DEFER** | Keep the seam, postpone the build (YAGNI). | Move to a later phase/backlog. | Stub/flag the implementation; ship the interface. |
-| **ON-DEMAND** | Replace stored/pre-staged state with compute-at-read. | Don't plan pre-rendering/pre-caching. | Swap a table/cache for a runtime helper. |
-| **EXTRACT** | Split a mixed concern apart (design decoupling). | Separate concerns in the design. | Break up a god-component/module. |
-| **RE-HOME** | Move ownership to the correct domain/service/DB. | Fix the boundary in the design. | Move logic/table to its real owner. |
-| **REFACTOR** | Keep the behavior, rewrite the execution. | Simplify the planned pattern. | Fix tech debt / bad name / wrong library. |
-| **OUT-OF-SCOPE** | Belongs to another domain entirely. | Not this plan's concern. | Owned by another service — stop counting it. |
-
-Distinctions that matter:
-- **RE-HOME vs EXTRACT.** RE-HOME = good logic, wrong home (move it). EXTRACT =
-  tangled concerns (split it before it ossifies).
-- **DEFER vs DROP.** DEFER keeps the seam/interface for a known-future need; DROP
-  removes it because nothing needs it. Default to DROP unless a requirement names
-  the future use.
-- **ON-DEMAND vs KEEP.** If stored state can be recomputed cheaply at read time,
-  prefer ON-DEMAND — it removes storage, sync, and staleness surface area.
+Each verdict must cite evidence (file:line or live DB), never row count.
+Pick the most precise verdict from the taxonomy.
 
 ---
 
@@ -313,17 +302,16 @@ implementing unless they ask.
 
 ## Fold tests (reference)
 
-| Cardinality | Fold type | Blocker |
-|---|---|---|
-| 1:1 with parent | Columns on parent | None — do it |
-| 1:N, bounded set (≤~10) | JSONB on parent | Independent relational access needed |
-| 1:N, unbounded/queried | Keep as table | — |
-| N:M | Keep as table | — |
-| Any | Cannot fold across a PII/DB boundary | PII crosses a DB line |
+The full fold-test table (cardinality → fold type → blocker, plus the
+independent-relational-access check and the PII/DB-boundary rule) lives in
+[references/fold_tests.md](references/fold_tests.md).
 
-**Independent relational access** = does anything query this entity directly by
-its own key, join it independently, or filter/sort it without going through the
-parent? If yes → fold is blocked.
+Quick reference:
+- 1:1 with parent → columns on parent (just do it).
+- 1:N bounded (≤~10) → JSONB on parent, **unless** independent relational
+  access is needed.
+- 1:N unbounded/queried, N:M → keep as table.
+- Never fold across a PII/DB boundary.
 
 ---
 
@@ -331,10 +319,10 @@ parent? If yes → fold is blocked.
 
 - **Parallel for the Stage 1 triple** (DB + code + plan) — independent, run at once.
 - **One cluster per Stage 2 agent** — never mix unrelated clusters.
-- **Read-only only.** All dissection agents use `subagent_type: "explore"`. No write
-  access. Do NOT pass a `model` — sub-agents inherit the parent model.
-- **Agents return raw evidence, not verdicts.** Synthesis is the orchestrator's job.
-- **Escalate discrepancies** to the checkpoint; never resolve them silently.
+- **Read-only only.** All dissection agents use `subagent_type: "explore"`. No
+  write access. Do NOT pass a `model` — sub-agents inherit the parent model.
+- **Agents return raw evidence, not verdicts.** Synthesis is the orchestrator's
+  job. Escalate discrepancies to the checkpoint; never resolve them silently.
 
 ---
 
@@ -365,3 +353,10 @@ parent? If yes → fold is blocked.
   absence).
 - Row count appears only as liveness context, never as a reason.
 - Lead with plain-terms summaries, then technical detail. Write both.
+
+## References
+
+| File | Use it for |
+|---|---|
+| [references/verdict_taxonomy.md](references/verdict_taxonomy.md) | Full dynamic verdict taxonomy (KEEP/FOLD/DROP/DEFER/ON-DEMAND/EXTRACT/RE-HOME/REFACTOR/OUT-OF-SCOPE) with meanings, plan-vs-code typicals, distinctions, output format |
+| [references/fold_tests.md](references/fold_tests.md) | Fold-test table (cardinality → fold type → blocker), independent-relational-access check, PII/DB-boundary rule |

@@ -1,26 +1,63 @@
 ---
 name: documentation-writer
 description: >-
-  Writes clear, scannable documentation (READMEs, guides, doc sites, markdown) using a research-first,
-  phased workflow. Uses web search for up-to-date facts and—when available—delegates broad repo reads to
-  an explore subagent before drafting. Use when the user asks for documentation, technical writing,
-  doc websites, or readable markdown; or when accuracy, versions, or external APIs matter.
-version: "1.0.1"
+  Write clear, scannable documentation using a research-first, phase-separated
+  workflow. Covers READMEs, doc sites, API references, migration guides, and
+  technical markdown. Uses web search for up-to-date facts and delegates broad
+  repo reads to an explore subagent before drafting.
+  Use when the user asks for documentation, technical writing, READMEs, doc
+  websites, API docs, or readable markdown — or when accuracy, versions, or
+  external APIs matter.
+user-invocable: false
+disable-model-invocation: false
+version: "1.1.0"
 author: "Ali Farahat"
 tags: ["documentation", "technical-writing", "markdown", "research-first"]
+when_to_use: |
+  USE WHEN:
+  - User asks for documentation, README, doc site, or technical writing.
+  - User needs API reference, migration guide, or setup instructions.
+  - Accuracy on versions, install commands, or external APIs matters.
+  - User needs markdown formatting or doc site structure advice.
+
+  DO NOT USE WHEN:
+  - User needs a code review or code change (separate skill).
+  - User needs marketing copy (use marketing-psychology).
+  - User needs architecture diagrams or visual documentation.
 ---
 
 # Documentation Writer
 
-## How this relates to “subagents”
+> **Leading words:** research-first, evidence-aware, phase separation,
+> scannability, BLUF (Bottom Line Up Front), progressive disclosure.
 
-Cursor does not expose **user-defined nested sub-sub-agents** in skill files. What you can do in practice:
+Research-first technical documentation workflow. Each phase ends with a
+checkpoint the agent must complete before proceeding — phase separation
+prevents the agent from drafting prose before the truth is gathered.
 
-- **Phased work**: Treat each phase below as a distinct pass (gather → structure → write → verify). That mimics routing without a separate UI.
-- **Built-in delegation**: If the host agent can launch a **Task / explore** subagent, use a **read-only** explore pass for large or unfamiliar codebases *before* drafting, then do research and writing in follow-up steps. Do not assume that tool exists; use it only when present.
-- **Online research**: Use **web search** (and official docs links from results) for anything version-sensitive or external—see “Research protocol”.
+## How this relates to subagents
 
-## Research protocol (online)
+Cursor does not expose user-defined nested sub-sub-agents in skill files. What
+you can do in practice:
+
+- **Phased work:** Treat each phase below as a distinct pass. That mimics
+  routing without a separate UI.
+- **Built-in delegation:** If the host agent can launch a `Task` / `explore`
+  subagent, use a read-only explore pass for large or unfamiliar codebases
+  *before* drafting. Do not assume that tool exists; use it only when present.
+- **Online research:** Use web search (and official docs links from results)
+  for anything version-sensitive or external.
+
+## Phase 1 — Discover (know what exists in-repo)
+
+Read relevant files. For unfamiliar or large codebases, delegate broad mapping
+to an explore subagent when available.
+
+*Exit criteria:* You can list every file/API/feature the docs must cover.
+🛑 **Checkpoint:** Do not proceed to Research until the user confirms the scope
+(or you are explicitly operating solo and the scope is unambiguous).
+
+## Phase 2 — Research (external truth)
 
 Run web research **before** asserting facts about:
 
@@ -28,81 +65,88 @@ Run web research **before** asserting facts about:
 - Install commands, system requirements, LTS/support timelines
 - Security or compliance claims (cite sources; avoid unsourced absolutes)
 
-**Process:**
+**Process:** Form 2-4 precise search queries (product + version + topic).
+Prefer **primary sources** (official docs, repo README, standards bodies) over
+random blogs. Capture citations (link + short note of what it supports). If
+sources conflict, say what is uncertain and what to verify locally.
 
-1. Form 2–4 precise search queries (product + version if known + topic).
-2. Prefer **primary sources** (official docs, repo README, standards bodies) over random blogs.
-3. Capture **citations**: link + short note of what it supports (for your own accuracy; user may not want a bibliography in the final doc—ask if unsure).
-4. If sources conflict, say what is uncertain and what to verify locally.
+*Exit criteria:* Every claim you will make has a source link.
+🛑 **Checkpoint:** Do not proceed to Outline until Research is complete.
 
-## Multi-phase workflow (default)
+## Phase 3 — Outline (structure before prose)
 
-Use this sequence unless the user asks for a one-shot edit only.
+Headings, audience, prerequisites, nav/sidebar plan for sites. Apply BLUF:
+lead each section with the direct answer in 40-60 words, then expand. Use
+progressive disclosure — summary first, depth below.
 
-| Phase | Goal | Typical actions |
-|-------|------|------------------|
-| **1 — Discover** | Know what exists in-repo | Read relevant files; optionally delegate broad mapping to an explore subagent when available |
-| **2 — Research** | External truth | Web search + official docs; note versions and constraints |
-| **3 — Outline** | Structure before prose | Headings, audience, prerequisites, nav/sidebar plan for sites |
-| **4 — Draft** | Write | Apply structure + style rules below; examples first where helpful |
-| **5 — Verify** | Correctness | Re-read against repo; re-check critical external claims if needed |
+*Exit criteria:* The document skeleton is approved.
+🛑 **Checkpoint:** Present the outline. Do not draft until confirmed.
 
-**Why phases**: Reduces hallucinated APIs and outdated install steps by separating *finding truth* from *writing*.
+## Phase 4 — Draft (write)
 
-## Core Principles
+Apply the style rules below. Start each section with the BLUF answer in the
+first 40-60 words. Use HTML tables for comparisons, definition lists for specs.
+Lead with concrete examples.
 
-1. **Clarity & Brevity**: Write concisely. Use simple language. Avoid jargon unless necessary.
-2. **Progressive Disclosure**: Start with a high-level summary, then dive into details.
-3. **Scannability**: Use headings, bullet points, and bold text to make the document easy to scan.
-4. **Actionable**: Provide clear steps, copy-pasteable code snippets, and concrete examples.
-5. **Evidence-aware**: Prefer verified facts (repo + docs) over memory when the topic is versioned or external.
+*Exit criteria:* Every section from the outline has content.
 
-## Documentation Structure
+## Phase 5 — Verify (correctness)
 
-When creating a new documentation file or README, use the following standard structure:
+Re-read against the repo. Re-check any critical external claims. Run the code
+examples if possible.
 
-### 1. Title & Description
-- Clear, descriptive title.
-- 1-2 sentence summary of what the project/feature does and why it exists.
+*Exit criteria:* Every code example runs as documented; every external claim
+still matches the cited source.
 
-### 2. Quick Start / Installation
-- The absolute minimum steps to get up and running.
-- Provide exact commands.
+## Core principles
 
-### 3. Usage / Examples
-- Show, don't just tell. Provide concrete code examples.
-- Start with the most common use case.
+1. **BLUF** — Bottom Line Up Front. Lead each section with the direct answer.
+2. **Progressive disclosure** — summary first, depth below. Readers (and LLMs)
+   extract the gist immediately.
+3. **Scannability** — headings, bullets, tables. Every paragraph earns its place.
+4. **Evidence-aware** — cite sources for versions, APIs, install commands.
+5. **Concrete over abstract** — examples before explanations.
 
-### 4. API / Reference (if applicable)
-- Detailed breakdown of parameters, options, and returns.
-- Use tables for structured data.
+## Standard documentation structure
 
-## Formatting Guidelines
+When creating a new file or README:
 
-- **Headings**: Use sentence case for headings. Do not skip heading levels (e.g., don't jump from H1 to H3).
-- **Code Blocks**: Always specify the language for syntax highlighting (e.g., \`\`\`typescript).
-- **Callouts**: Use blockquotes (`>`) for important notes or warnings.
-- **Links**: Ensure all links are descriptive (e.g., "Read the setup guide", not "Click here").
+1. **Title + 1-2 sentence summary** — what it does and why it exists (BLUF).
+2. **Quick Start / Installation** — minimum steps to get running, exact commands.
+3. **Usage / Examples** — show, don't tell. Most common use case first.
+4. **API / Reference** (if applicable) — parameters, options, returns. Tables
+   for structured data.
 
-## Writing Style
+## Formatting guidelines
 
-- **Active Voice**: Use active voice ("The script generates a file") instead of passive voice ("A file is generated by the script").
-- **Direct Address**: Speak directly to the reader using imperative mood for instructions ("Run this command", "Install the package").
-- **Consistent Terminology**: Stick to one term for a concept throughout the document.
+- Sentence case headings. Do not skip levels (H1 > H2 > H3).
+- Language-tagged code blocks (```typescript).
+- BLOCKQUOTE for callouts (> Note, > Warning).
+- HTML tables for comparisons, `<dl>` for specifications.
+- Descriptive link text ("Read the setup guide"), not "Click here".
+
+## Style rules
+
+- Active voice ("The script generates a file").
+- Direct address / imperative for instructions ("Run this command").
+- Consistent terminology throughout the document.
+- One core idea per paragraph. LLMs extract passages, not pages.
 
 ## Workflows
 
-### Creating a Documentation Website
-1. Recommend a suitable framework if not specified (e.g., VitePress, Nextra, Docusaurus, or MkDocs).
-2. Establish a clear sidebar/navigation structure:
-   - Introduction/Getting Started
-   - Core Concepts
-   - Guides/Tutorials
-   - API Reference
-3. Write the content keeping each page focused on a single topic.
+### Creating a documentation website
 
-### Reviewing Existing Documentation
-1. Check for outdated information; **web-search** claims that depend on versions, APIs, or third-party behavior.
+1. Recommend a framework if not specified (VitePress, Nextra, Docusaurus,
+   MkDocs).
+2. Establish a clear sidebar/navigation structure: Introduction/Getting Started
+   → Core Concepts → Guides/Tutorials → API Reference.
+3. Write content with each page focused on a single topic.
+
+### Reviewing existing documentation
+
+1. Check for outdated information; web-search claims that depend on versions,
+   APIs, or third-party behavior.
 2. Improve formatting for scannability.
 3. Simplify complex sentences.
-4. Ensure code examples are correct and well-formatted (match the repo or cited docs).
+4. Ensure code examples are correct and well-formatted (match the repo or
+   cited docs).

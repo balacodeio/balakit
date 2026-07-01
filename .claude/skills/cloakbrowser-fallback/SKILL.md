@@ -1,14 +1,40 @@
 ---
 name: cloakbrowser-fallback
-description: Stealth browser fallback that uses CloakBrowser (a real Chromium binary with C++ source-level fingerprint patches) to load sites that block normal automation. Use when the built-in browser tool or the Chrome DevTools MCP fails to reach a page because of bot detection, Cloudflare/Turnstile, reCAPTCHA, a 403/429/"access denied"/"are you human" interstitial, or an empty/blocked response. Also use when the user manually asks for "cloakbrowser", a "stealth browser", or to bypass a block.
-version: "1.0.1"
+description: >-
+  Stealth browser fallback using CloakBrowser (custom-compiled Chromium with
+  C++ source-level fingerprint patches). Use when the built-in browser tool or
+  Chrome DevTools fails due to bot detection, Cloudflare/Turnstile walls,
+  reCAPTCHA, 403/429/"access denied"/"are you human" interstitials, or empty/
+  blocked responses. Also use when the user asks for "cloakbrowser", "stealth
+  browser", or to bypass a block.
+user-invocable: true
+disable-model-invocation: true
+version: "1.1.0"
 author: "Ali Farahat"
-tags: ["cloakbrowser", "stealth-browser", "anti-bot-bypass", "playwright"]
+tags: ["cloakbrowser", "stealth-browser", "anti-bot-bypass", "playwright", "fallback"]
+when_to_use: |
+  USE WHEN:
+  - The built-in browser returned 403, 429, "Access Denied", "blocked".
+  - A Cloudflare, Turnstile, or reCAPTCHA wall blocks content.
+  - The response is empty or clearly a bot-detection interstitial.
+  - The user explicitly asks for stealth browser or to bypass a block.
+  - Normal automation fails to load a page.
+
+  DO NOT USE WHEN:
+  - The built-in browser works fine (try it first).
+  - The site requires login credentials or image CAPTCHAs (CloakBrowser can't
+    solve these).
+  - The user wants to bypass paywalls or violate a site's terms of service.
 ---
 
 # CloakBrowser Fallback
 
-Stealth Chromium for navigating sites that block ordinary automation. Drop-in Playwright API, but the browser is a custom-compiled Chromium binary, so detectors score it as a real human browser.
+> **Leading words:** stealth browser, fallback, humanize, bot detection,
+> Turnstile, headless failover, real Chromium binary.
+
+Stealth Chromium for navigating sites that block ordinary automation. Drop-in
+Playwright API, but the browser is a custom-compiled Chromium binary, so
+detectors score it as a real human browser.
 
 Already installed on this machine. Both languages share the same stealth binary at `~/.cloakbrowser/`:
 - **Python** (global): `pip` package `cloakbrowser`.
@@ -18,12 +44,15 @@ Prefer **Python** by default. Use **JS** when the target codebase/repo is JS/TS 
 
 ## When to reach for this
 
-Use as a **fallback only** — try the built-in browser tool or Chrome DevTools MCP first. Escalate to CloakBrowser when any of these happen:
+Use as a **fallback only** — try the built-in browser tool or Chrome DevTools
+MCP first. Escalate to CloakBrowser when any of the triggers in the
+frontmatter `when_to_use` fire (403/429, Cloudflare/Turnstile/reCAPTCHA walls,
+empty/blocked response, explicit user ask).
 
-- The page returns 403 / 429 / "Access Denied" / "Sorry, you have been blocked".
-- A Cloudflare / Turnstile / reCAPTCHA / "Verify you are human" wall blocks content.
-- The response is empty, truncated, or clearly a bot-detection interstitial.
-- The user explicitly asks for the stealth browser / to bypass a block.
+**Headless failover pattern:** start headless. If a Turnstile **managed**
+challenge appears, re-run with `--headed` — it clears with one click after the
+page settles. If an image CAPTCHA appears, stop and report to the user —
+CloakBrowser does not solve image CAPTCHAs.
 
 ## Quick start (one-shot fetch)
 
@@ -84,9 +113,13 @@ Everything else is standard Playwright (`click`, `fill`, `locator`, etc.) — sa
 ## Decision notes
 
 - **Turnstile non-interactive** → works headless, auto-resolves.
-- **Turnstile managed** → use `--headed`; it clears with one click after the page settles.
-- CloakBrowser does **not** solve image CAPTCHAs and has no built-in proxy rotation. If a site demands an image CAPTCHA, report that to the user rather than looping.
-- Don't use this to defeat paywalls/auth or violate a site's terms — it's for reaching content blocked by overzealous bot detection during legitimate work.
+- **Turnstile managed** → use `--headed`; it clears with one click after the
+  page settles (the headless-failover pattern from above).
+- CloakBrowser does **not** solve image CAPTCHAs and has no built-in proxy
+  rotation. If a site demands an image CAPTCHA, report that to the user
+  rather than looping.
+- Don't use this to defeat paywalls/auth or violate a site's terms — it's for
+  reaching content blocked by overzealous bot detection during legitimate work.
 
 ## Verifying / maintaining the binary
 
