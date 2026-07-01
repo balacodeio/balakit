@@ -1,18 +1,17 @@
 ---
 name: authoring-skills-and-rules
 description: >-
-  Authoritative workflow for creating and updating agent Skills (SKILL.md) and
-  rules/instructions across five platforms — Claude Code, Cursor, OpenCode,
-  Codex, and GitHub Copilot. Covers the exact file locations, frontmatter fields,
-  and activation models for each, plus the universal craft: progressive
-  disclosure, writing trigger-rich descriptions, naming, size budgets, and what
-  to leave out. Use when the user asks to write, author, scaffold, refactor,
-  port, or review a Skill, Cursor rule (.mdc), AGENTS.md, copilot-instructions,
-  instructions file, or prompt file — or to make one Skill/rule work across
-  multiple agents.
+  Author Skills (SKILL.md) and rules/instructions across Claude Code, Cursor,
+  OpenCode, Codex, and GitHub Copilot. Covers frontmatter, file layout,
+  activation model, cross-platform mirroring, and the universal craft:
+  progressive disclosure, trigger-rich descriptions (context pointers), leading
+  words, token budget, naming, and what to leave out.
+  Use when the user asks to write, scaffold, refactor, port, or review a Skill,
+  Cursor rule (.mdc), AGENTS.md, copilot-instructions, or prompt file — or to
+  make one Skill/rule work across multiple agents.
 user-invocable: true
 disable-model-invocation: false
-version: "1.0.0"
+version: "1.1.0"
 author: "Ali Farahat"
 tags: ["meta", "skills", "rules", "authoring", "cross-platform", "claude-code", "cursor", "opencode", "codex", "copilot"]
 when_to_use: |
@@ -34,6 +33,10 @@ when_to_use: |
 
 # Authoring Skills and Rules (cross-platform)
 
+> **Leading words:** progressive disclosure, context pointer, token budget,
+> trigger-rich description, leading words, phase separation, branch-specific
+> reference, single source of truth, deletion test.
+
 A practitioner's guide to writing and maintaining the two artifact families that
 steer coding agents — **Skills** (on-demand, procedural capabilities) and
 **Rules / instructions** (standing context) — across **Claude Code, Cursor,
@@ -44,7 +47,8 @@ review a Skill or rule. If the target platform(s) are unstated, ask before
 scaffolding — the file layout differs per platform.
 
 This skill carries the per-platform exact details in `references/` (loaded on
-demand). The body below is the decision model and the universal craft.
+demand). The body below is the decision model + the universal craft + a
+phase-separated workflow.
 
 ---
 
@@ -71,30 +75,40 @@ Rules of thumb:
 
 ---
 
-## Cross-platform support matrix
+## User-invoked vs Model-invoked
 
-The big picture: **`SKILL.md` is now a cross-agent standard.** As of Dec 2025,
-all five — Claude Code, Cursor, OpenCode, Codex, *and* Copilot — auto-discover
-Skills from a `skills/` directory. Author a Skill once and mirror the folder into
-each agent's location. What still differs sharply is **rules** (standing
-instructions): each platform has its own format and file.
+For Skills, the second decision (after Skill-vs-Rule) is **how the Skill is
+triggered**. The `description` is the swing vote.
 
-| Platform | Skills? | Skill location | Rules / instructions | Rule frontmatter |
-|---|---|---|---|---|
-| **Claude Code** | ✅ | `.claude/skills/<name>/SKILL.md` · `~/.claude/skills/` | `CLAUDE.md` (+ `@import`); `.claude/rules/*.md` (`paths:` scoped); `.claude/commands/*.md` | — (`.md`, not `.mdc`) |
-| **Cursor** | ✅ (via skills.sh) | `.cursor/skills/<name>/SKILL.md` | `.cursor/rules/*.mdc` | `description`, `globs`, `alwaysApply` |
-| **OpenCode** | ✅ | `.opencode/skills/<name>/SKILL.md`; also reads `~/.claude/skills`, `~/.agents/skills` (+ project `.claude/`, `.agents/`) | `AGENTS.md` + `instructions[]` in `opencode.json` | — |
-| **Codex** | ✅ (since Dec 2025) | `.agents/skills/<name>/SKILL.md` (+ parent / repo-root / `~/.agents/skills` / `/etc/codex/skills`) | `AGENTS.md` / `AGENTS.override.md` + `~/.codex/config.toml` | — |
-| **Copilot** | ✅ (since Dec 2025) | `.github/skills/<name>/SKILL.md`; also reads `.claude/skills`, `.agents/skills` | `.github/copilot-instructions.md`; `.github/instructions/*.instructions.md`; `.github/prompts/*.prompt.md`; `AGENTS.md` | `applyTo` (instructions); `description`/`agent`/`model`/`tools` (prompts) |
+| Flag combination | What the agent sees | What the user does | When to pick |
+|---|---|---|---|
+| `user-invocable: true` + `disable-model-invocation: false` (BOTH) | Description in context — agent may auto-invoke | May also `/command` invoke | Common, safe workflows where auto-detect is desired (this skill) |
+| `user-invocable: true` + `disable-model-invocation: true` (USER-ONLY) | Description hidden from agent | Must `/command` invoke explicitly | Heavy pipelines the user must opt into (e.g. `deep-deliberation`) — minimizes context load + unpredictability |
+| `user-invocable: false` (MODEL-ONLY, rare) | Description in context | Cannot invoke manually | Almost never — restricts user control |
 
-> **Key leverage point:** `.agents/skills/` and `.claude/skills/` are shared
-> cross-agent directories — Codex, OpenCode, *and* Copilot all read them (and
-> Claude Code reads `.claude/skills/`). A single authored folder, mirrored (or
-> symlinked) into the right places, covers every agent for skills. The remaining
-> per-agent work is **rules**. See [references/cross-platform.md](references/cross-platform.md)
-> for the mirror strategy this very repo uses.
+**Heuristic:** if the workflow is cheap and the user benefits from the agent
+auto-detecting the need → BOTH. If the workflow is heavy (multiple subagents,
+human checkpoints, large context budget) → USER-ONLY, so the agent does not
+fire it on a whim.
 
-Per-platform exact paths, precedence, and field semantics:
+---
+
+## Cross-platform support — the leverage point
+
+**`SKILL.md` is now a cross-agent standard.** As of Dec 2025, all five — Claude
+Code, Cursor, OpenCode, Codex, *and* Copilot — auto-discover Skills from a
+`skills/` directory. Author a Skill once and mirror the folder into each agent's
+location. What still differs sharply is **rules** (standing instructions).
+
+**Key leverage:** `.agents/skills/` and `.claude/skills/` are shared cross-agent
+directories — Codex, OpenCode, *and* Copilot all read them (and Claude Code
+reads `.claude/skills/`). A single authored folder, mirrored (or symlinked) into
+the right places, covers every agent for skills. The remaining per-agent work
+is **rules**.
+
+For the per-platform exact paths, precedence, field semantics, and the mirror
+strategy this very repo uses, see:
+- [references/cross-platform.md](references/cross-platform.md) — write-once-run-everywhere strategy
 - [references/claude-code.md](references/claude-code.md)
 - [references/cursor.md](references/cursor.md)
 - [references/opencode.md](references/opencode.md)
@@ -139,7 +153,19 @@ detail loads only when needed.
 └── scripts/            # executable helpers (optional)
 ```
 
-### 3. Naming and scope
+### 3. Leading words — the agent's reasoning anchor
+**Leading words** are dense phrases that pack a lot of meaning into a small
+space. Put them in the skill body (typically under the title as a banner) and
+the agent will repeat them in its own reasoning traces, which anchors its
+behavior to your intent without long prose.
+
+- ✅ `vertical slice` instead of "don't code layer by layer; seek feedback early".
+- ✅ `ground truth` instead of "always read the real artifacts before branching".
+- Place them once as a banner, then echo them where the corresponding behavior
+  is required. The agent's thinking traces are the audit channel — if it is not
+  echoing the leading word, the steering did not take.
+
+### 4. Naming and scope
 - **One capability per Skill.** Gerund or plain-descriptive names
   (`processing-pdfs`, `authoring-skills-and-rules`) beat vague ones (`helper`,
   `utils`). The Skill folder name **must equal** the `name` in frontmatter (and
@@ -147,7 +173,7 @@ detail loads only when needed.
 - **One concept per rule.** Split large standards into composable rules rather
   than one giant file.
 
-### 4. Write for a smart reader, concretely
+### 5. Write for a smart reader, concretely
 - Assume the agent is capable — don't explain `git`, `npm`, or basic concepts.
 - Be **actionable and specific**, like a sharp internal doc. Prefer examples and
   `@file` / path references over pasting whole files.
@@ -156,55 +182,73 @@ detail loads only when needed.
 - **Justify constants** (why `timeout=30`), and **declare dependencies** and how
   to install them — never assume a tool is present.
 
-### 5. What to leave out
+### 6. What to leave out
 - Secrets, API keys, tokens — ever.
 - Whole style guides (use a linter) and generic tool docs the agent already knows.
 - Rare edge cases and duplicated codebase docs (link to the canonical source).
+- **No-ops** — paragraphs that, if deleted, would not change agent behavior. Run
+  the deletion test: if the agent would still do the right thing without it, cut it.
+- **Sediment** — stale instructions left by previous authors. Audit and prune.
 
 ---
 
-## Workflow — creating a new Skill or rule
+## Workflow — 4 phases (creating or updating)
 
-Track progress out loud:
+Each phase ends with a checkpoint. Do not skip ahead — phase separation prevents
+the agent from rushing to draft before the scope is locked.
+
+### Phase 1 — Scope
 
 ```
-- [ ] 1. Classify: Skill vs rule (use the table above)
-- [ ] 2. Confirm target platform(s) — ask if unstated
-- [ ] 3. Draft the description (triggers + what + when), third person
-- [ ] 4. Scaffold the correct file layout per platform (see references/)
-- [ ] 5. Write the lean body; push depth to references/, logic to scripts/
-- [ ] 6. Mirror/port to every requested platform
-- [ ] 7. Validate against the checklist
+- [ ] Classify: Skill vs rule (use the table above)
+- [ ] Choose invocation: BOTH vs USER-ONLY (use the decision table above)
+- [ ] Confirm target platform(s) — ask if unstated
 ```
 
-1. **Classify.** Skill (procedure) or rule (standing context)? If procedural,
-   default to a Skill so it stays out of context until needed.
-2. **Confirm platforms.** Which agents must this serve? This sets the file
-   layout and whether a Copilot translation is needed.
-3. **Description first.** Write and pressure-test it before the body — if you
-   can't name the triggers crisply, the scope is still fuzzy.
-4. **Scaffold** using the exact paths/frontmatter in the per-platform reference.
-5. **Body lean, depth out.** Decision model + workflow in the entry file;
-   everything else in `references/`.
-6. **Mirror/port.** For Skills, copy the folder to each platform's location (see
-   [references/cross-platform.md](references/cross-platform.md)). For Copilot,
-   translate the Skill into `.github/instructions/*.instructions.md` (use
-   `applyTo` if path-scoped) or a `.prompt.md`.
-7. **Validate** (below).
+🛑 **Checkpoint:** State the classification, invocation flag, and platform list
+in one sentence. Do not proceed to Draft until the user confirms (or you are
+explicitly operating solo and the scope is unambiguous).
 
----
+### Phase 2 — Draft
 
-## Workflow — updating an existing Skill or rule
+```
+- [ ] Write the description first (triggers + what + when), third person
+- [ ] Scaffold the correct file layout per platform (see references/)
+- [ ] Write the lean body; inject leading words; push depth to references/,
+      logic to scripts/
+```
 
-1. **Locate every copy.** A Skill often lives in a source dir plus mirrors
-   (`.cursor/`, `.agents/`, `.claude/`). Find them all before editing — `grep`
-   the `name:` slug across the repo.
-2. **Edit the source of truth**, then re-mirror — never hand-edit one copy and
-   leave the others to drift.
-3. **Bump the `version`** (SemVer) in frontmatter if the Skill carries one.
-4. **Re-check the description** against the new behavior — stale triggers are the
-   most common rot.
-5. **Validate** and update the changelog/README if the repo tracks them.
+🛑 **Checkpoint:** Read the description aloud. If you cannot name the triggers
+crisply, the scope is still fuzzy — go back to Phase 1.
+
+### Phase 3 — Distribute
+
+```
+- [ ] Mirror/port the source folder to every requested platform
+- [ ] For Copilot, translate to .github/instructions/*.instructions.md
+      (applyTo if path-scoped) or .prompt.md
+- [ ] For Skills: copy the folder to each platform's location
+      (see references/cross-platform.md)
+```
+
+🛑 **Checkpoint:** `grep` the `name:` slug across the repo. Every mirror must be
+in sync before validating.
+
+### Phase 4 — Validate
+
+Run the checklist below. Any miss → back to the relevant phase.
+
+### Updating an existing Skill or rule
+
+The 4 phases apply, with these additions:
+- **Phase 1:** `grep` the `name:` slug across the repo to locate every copy
+  (source + mirrors under `.cursor/`, `.agents/`, `.claude/`).
+- **Phase 2:** Edit the **source of truth** only; never hand-edit a mirror.
+  Bump the `version` (SemVer) in frontmatter. Re-check the description against
+  the new behavior — stale triggers are the most common rot.
+- **Phase 3:** Re-mirror from source so mirrors never drift. Update the
+  changelog/README if the repo tracks them.
+- **Phase 4:** Same checklist.
 
 ---
 
@@ -213,6 +257,10 @@ Track progress out loud:
 - [ ] `name` matches the folder name; lowercase-hyphen; no reserved words.
 - [ ] `description` is third person, ≤1024 chars, and states **what + when** with
       concrete triggers.
+- [ ] Invocation flags set intentionally (BOTH vs USER-ONLY) and match the
+      workflow's weight.
+- [ ] Leading words injected as a banner and echoed where the corresponding
+      behavior is required.
 - [ ] Entry file is lean (well under 500 lines); depth is in `references/`.
 - [ ] References are one level deep; no nested reference chains.
 - [ ] No secrets; dependencies declared; constants justified.
@@ -221,6 +269,7 @@ Track progress out loud:
 - [ ] If multi-platform: every requested platform has its copy/translation, and
       mirrors are in sync.
 - [ ] One capability per Skill / one concept per rule.
+- [ ] Deletion test run on every paragraph — no no-ops, no sediment.
 
 ---
 
