@@ -1,14 +1,19 @@
 ---
 name: deep-deliberation
 description: >-
-  Deeply analyze a problem, feature, or decision through a 3-stage pipeline:
-  Tree-of-Thought branch exploration, an expert red-team debate, and a senior
-  developer red-team debate, ending in a grounded final recommendation with
-  ranked alternatives. Use when the user explicitly invokes deep-deliberation,
-  or asks to deeply explore / stress-test / red-team a problem, feature idea,
-  architecture choice, or hard decision before committing to an approach.
+  MANDATORY 3-stage pipeline when the user invokes deep-deliberation. Stage 1:
+  Tree-of-Thought branches (fill the Problem/Branches/Evaluation/Recommendation
+  template) and STOP at Checkpoint 1. Stage 2: launch 5 parallel expert
+  red-team Task subagents (subagent_type: explore, no model), synthesize, STOP
+  at Checkpoint 2. Stage 3: launch 5 parallel senior-dev red-team Task
+  subagents, synthesize a final recommendation with ranked alternatives, STOP
+  at Checkpoint 3. Three human checkpoints. Do NOT implement, do NOT compress
+  into a quick answer, do NOT skip stages, subagents, or templates. Use when
+  the user explicitly invokes deep-deliberation, or asks to deeply explore /
+  stress-test / red-team a problem, feature idea, architecture choice, or hard
+  decision before committing to an approach.
 disable-model-invocation: true
-version: "1.2.0"
+version: "1.3.0"
 author: "Ali Farahat"
 tags: ["deep-deliberation", "orchestration", "red-team", "decision-making"]
 when_to_use: |
@@ -35,6 +40,46 @@ when_to_use: |
 A structured "deep think" pipeline for high-stakes problems where the cost of a
 wrong approach is high. It explores the solution space, then attacks the chosen
 approach from two independent angles before recommending.
+
+## NON-NEGOTIABLE (read first)
+
+If the user invoked deep-deliberation, this skill **overrides** brevity, Caveman
+mode, and "just answer" instincts until Checkpoint 3 completes. The pipeline is
+the deliverable — a quick answer is a failure mode, not a shortcut.
+
+**Per-turn rules:**
+1. First lines of every deliberation message: the Progress checklist (copy from
+   the *Pipeline overview* section below). Track out loud every turn.
+2. Stage 1 output **must** include these headers exactly: `## Problem`,
+   `## Branches`, `### Branch A —`, …, `## Evaluation`, `## Recommendation`.
+   Missing any header = non-compliant. Do not substitute tables, diagrams-only,
+   or narrative summaries for the template.
+3. **Forbidden in Stage 1:** implementation, file edits, `AskQuestion` without
+   the full Stage 1 template above it, fewer than 3 branches.
+4. **Forbidden before Checkpoint 1 answer:** `Task` tool, Stage 2/3 content,
+   code changes (Agent mode), plan documents (Plan mode).
+5. **Stage 2 requires proof of launch.** Your assistant message **must** contain
+   exactly **5** `Task` invocations (`subagent_type: "explore"`, no `model`) in
+   **one** turn, plus an `## Expert panel` header listing the 5 personas, plus
+   a `## Findings` synthesis **after** all 5 Task results return, plus
+   `CHECKPOINT 2 — waiting for your reply`. If any persona is skipped, state
+   `SUBAGENT_LAUNCH_FAILED` and why — do not fake a panel.
+6. **Stage 3 mirrors Stage 2** with 5 senior-dev personas and ends with the
+   Final template + `CHECKPOINT 3 — waiting for your reply`.
+7. **End every stage** with the literal phrase: `CHECKPOINT N — waiting for
+   your reply. I will not proceed until you respond.`
+8. **`disable-model-invocation: true` applies to the orchestrator's auto-load**,
+   not to subagent dispatch. The orchestrator **must still call `Task`** for
+   Stage 2 and Stage 3 — the flag does not excuse launching subagents.
+
+**Self-check before sending each stage output:**
+- Progress checklist present? Y/N
+- Required template headers present? Y/N
+- No code edits (Agent mode) / no plan docs (Plan mode)? Y/N
+- Checkpoint stop stated in literal phrase? Y/N
+- For Stage 2/3: 5 `Task` calls in one turn? Y/N
+
+If any answer is N, fix before sending.
 
 ## Core principles
 
@@ -112,13 +157,24 @@ Done by the main agent directly (no subagents).
 4. **Recommend** the strongest branch with a short rationale, plus the runner-up.
 5. **Add the orchestrator's own pushback** — at least one challenge to your own
    recommendation.
+6. **Copy the Stage 1 template skeleton** (see *Output templates* below) into
+   your response and fill every section. Do not substitute tables, diagrams-only,
+   or narrative summaries. Each branch **must** use the heading
+   `### Branch X — [name]`.
 
-Present using the Stage 1 template, then STOP.
+Present using the Stage 1 template, then STOP. Literal phrase to end the turn:
+`CHECKPOINT 1 — waiting for your reply. I will not proceed until you respond.`
 
 ### 🛑 Checkpoint 1
 
 Ask the user (use the AskQuestion tool when available): which branch to carry
 forward, or whether to adjust/merge branches. Do not proceed until they answer.
+
+**If AskQuestion returns no selection:** do not advance to Stage 2. Re-print
+the Progress checklist and the Stage 1 Recommendation. Ask again in plain text
+using branch letters (A–E). Meta questions (e.g. "did you follow the skill?")
+are answered without advancing the pipeline — answer the meta question, then
+restore the checklist and wait at Checkpoint 1.
 
 ---
 
@@ -141,12 +197,15 @@ Goal: stress-test the **selected branch** from diverse expert angles.
    fixable, note disagreements between experts, and add your own pushback.
 
 Use the subagent prompt template below. Present findings via the Stage 2
-template, then STOP.
+template, then STOP. Literal phrase to end the turn:
+`CHECKPOINT 2 — waiting for your reply. I will not proceed until you respond.`
 
 ### 🛑 Checkpoint 2
 
 Ask the user whether to proceed to the senior-dev review, revise the branch
-based on findings, or loop back to Stage 1. Wait for their answer.
+based on findings, or loop back to Stage 1. Wait for their answer. Apply the
+same AskQuestion-no-answer behavior as Checkpoint 1 (re-print, ask in plain
+text, do not advance).
 
 ---
 
@@ -164,12 +223,14 @@ output** and produces the final call.
 3. **Orchestrator synthesizes** into a single FINAL recommendation with ranked
    alternatives, explicit risks, and a concrete next step, aligned with the active coding mode.
 
-Present via the Final template, then STOP.
+Present via the Final template, then STOP. Literal phrase to end the turn:
+`CHECKPOINT 3 — waiting for your reply. I will not proceed until you respond.`
 
 ### 🛑 Checkpoint 3
 
 Present the final recommendation and ranked alternatives. Ask the user how they
-want to proceed. Do not start implementing unless they ask.
+want to proceed. Do not start implementing unless they ask. Apply the same
+AskQuestion-no-answer behavior as Checkpoint 1.
 
 ---
 
@@ -284,4 +345,21 @@ Orchestrator pushback: [self-challenge]
   `dissect`. The two skills share DNA — adversarial red-team subagents, human
   checkpoints, evidence over intent — but point in opposite directions: deliberation
   looks forward (design), dissect looks backward (audit).
+
+## Anti-patterns (non-compliant output)
+
+Any of the following is a skill violation — correct and re-emit the stage:
+
+- "Here are a few options…" without `### Branch A —` / `### Branch B —` headers.
+- Recommendation present but no `## Evaluation` section.
+- "I'll run expert review next" without 5 `Task` calls in the same turn (Stage 2).
+- `AskQuestion` as the only message content — branches must be in the message body.
+- Implementing code (Agent mode) or writing a plan doc (Plan mode) while a
+  checkpoint is open.
+- Synthesizing expert findings without 5 `Task` results returned.
+- Skipping a checkpoint because the user asked a meta question — answer the meta
+  question, then restore the Progress checklist and wait at the current checkpoint.
+- Forgetting the Progress checklist at the top of any deliberation message.
+- Ending a stage without the literal `CHECKPOINT N — waiting for your reply.`
+  phrase.
 ```
