@@ -13,7 +13,7 @@ description: >-
   stress-test / red-team a problem, feature idea, architecture choice, or hard
   decision before committing to an approach.
 disable-model-invocation: true
-version: "1.3.0"
+version: "1.4.0"
 author: "Ali Farahat"
 tags: ["deep-deliberation", "orchestration", "red-team", "decision-making"]
 when_to_use: |
@@ -36,6 +36,9 @@ when_to_use: |
 ---
 
 # Deep Deliberation
+
+> **Leading words:** Tree-of-Thought, red-team, phase separation, adversarial,
+> subagent, checkpoint, ground truth, persona, evidence over intent.
 
 A structured "deep think" pipeline for high-stakes problems where the cost of a
 wrong approach is high. It explores the solution space, then attacks the chosen
@@ -196,8 +199,10 @@ Goal: stress-test the **selected branch** from diverse expert angles.
 5. **Orchestrator synthesizes**: cluster the attacks, mark which are fatal vs
    fixable, note disagreements between experts, and add your own pushback.
 
-Use the subagent prompt template below. Present findings via the Stage 2
-template, then STOP. Literal phrase to end the turn:
+Use the subagent prompt template (see
+[references/subagent_prompt.md](references/subagent_prompt.md)). Present findings
+via the Stage 2 template (see [references/output_templates.md](references/output_templates.md)),
+then STOP. Literal phrase to end the turn:
 `CHECKPOINT 2 — waiting for your reply. I will not proceed until you respond.`
 
 ### 🛑 Checkpoint 2
@@ -223,7 +228,9 @@ output** and produces the final call.
 3. **Orchestrator synthesizes** into a single FINAL recommendation with ranked
    alternatives, explicit risks, and a concrete next step, aligned with the active coding mode.
 
-Present via the Final template, then STOP. Literal phrase to end the turn:
+Present via the Final template (see
+[references/output_templates.md](references/output_templates.md)), then STOP.
+Literal phrase to end the turn:
 `CHECKPOINT 3 — waiting for your reply. I will not proceed until you respond.`
 
 ### 🛑 Checkpoint 3
@@ -234,99 +241,17 @@ AskQuestion-no-answer behavior as Checkpoint 1.
 
 ---
 
-## Subagent prompt template
+## References
 
-Use this for every persona in Stage 2 and Stage 3. Fill the brackets.
+Branch-specific material lives behind context pointers — pull only when you
+reach that stage:
 
-```
-You are [persona name], a [role] with [experience]. Your expertise: [skillset /
-domain knowledge]. You bring a [angle/bias] perspective.
-
-PROBLEM:
-[restated problem]
-
-RELEVANT CODEBASE FILES & ENTRY POINTS:
-[list of specific file paths and directories to explore]
-
-APPROACH UNDER REVIEW:
-[selected branch — and for Stage 3, also the Stage 2 findings]
-
-YOUR TASK (red-team):
-1. Explore the relevant parts of this repository (focusing on the files listed above) to ground your analysis in the
-   actual code.
-2. ATTACK the approach: failure modes, edge cases, hidden costs, false
-   assumptions, maintainability traps, security/perf/ops concerns in your domain.
-3. Then concede: what holds up under your attack? What would you change to make
-   it survive?
-4. Give a verdict: GO / GO-WITH-CHANGES / NO-GO, with one-line justification.
-
-Return: a concise bulleted critique (attacks first, then concessions) and your
-verdict. Be specific and cite files/lines where relevant.
-```
-
----
-
-## Output templates
-
-### Stage 1 — Tree of Thought
-
-```markdown
-## Problem
-[restatement + assumptions]
-
-## Branches
-### Branch A — [name]
-- Idea: ...
-- Pros / Cons / Risk: ...
-- Effort: S/M/L
-[... B, C, ...]
-
-## Evaluation
-[scoring + what was pruned and why]
-
-## Recommendation
-Primary: [branch] — [why]
-Runner-up: [branch]
-Orchestrator pushback: [self-challenge]
-```
-
-### Stage 2 — Expert red-team
-
-```markdown
-## Expert panel
-[5 personas, one line each]
-
-## Findings
-- 🔴 Fatal: ...
-- 🟡 Fixable: ...
-- ⚪ Minor / disagreement: ...
-
-## Expert verdicts
-[GO / GO-WITH-CHANGES / NO-GO per persona]
-
-## Orchestrator synthesis
-[clustered view + own pushback]
-```
-
-### Final recommendation
-
-```markdown
-## Recommendation
-[the call + why]
-
-## Rationale
-[how Stage 1–3 led here]
-
-## Ranked alternatives
-1. [alt] — when to prefer it
-2. [alt] — when to prefer it
-
-## Risks & mitigations
-- [risk] → [mitigation]
-
-## Next step (Mode-Specific Action)
-[one concrete action depending on active mode (e.g. draft finalized plan document for Plan Mode, or prepare for implementation for Agent Mode)]
-```
+- [references/subagent_prompt.md](references/subagent_prompt.md) — subagent
+  prompt template + persona design notes for Stage 2 (expert red-team) and
+  Stage 3 (senior-dev red-team).
+- [references/output_templates.md](references/output_templates.md) — Stage 1
+  (Tree of Thought), Stage 2 (Expert red-team), and Final recommendation
+  templates.
 
 ---
 
