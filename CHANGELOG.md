@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.5.0]
+
+### Features
+- **Rule+skill pairing** — paired rules now install their skill automatically with no opt-out: selecting the `mental` rule always brings the `mental` skill (the always-on pointer is useless without the procedure it points at). Bundled skills are surfaced in the review step, e.g. `mental (bundled with the mental rule)`.
+- **Revamped install flow** — one grouped picker selects rules and skills together (no more separate "what do you want to install?" step), agents next, then a single scope prompt covering both rules and skills (`--skills-scope` still overrides). The review step now previews the exact destination every rule will land in, per agent, before anything is written.
+- **`--dry-run`** — shows the full review, the would-be file writes, the git-excludes action, and the exact skills.sh command without writing anything.
+
+### Fixes
+- **Cline global rules path corrected** — v1.4.0 wrote global Cline rules to `~/.cline/rules/`; the documented location is `~/Documents/Cline/Rules` (with `~/Cline/Rules` as the Linux fallback). Verified against docs.cline.bot.
+
+### Changes
+- omp now maps to skills.sh's `pi` agent id for skill installs (oh-my-pi is a distribution of the `pi` coding agent), so skills reach it instead of being skipped.
+- The `kilocode → kilo` skills.sh id mapping is now verified against skills.sh's agent validation (no behavior change).
+- Skill description extraction moved to a shared helper; menu hints and `--list` output are truncated cleanly.
+
 ## [v1.4.0]
 
 ### Features

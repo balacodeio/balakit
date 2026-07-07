@@ -19,15 +19,20 @@ can each be installed per-project or globally (user-level).
 npx balakit
 ```
 
-An interactive menu lets you choose **what** (rules and/or skills), **which**
-(per rule / per skill), **where** (which agents), and **scope** (this project or
-global). No clone, no manual copying.
+One grouped menu picks rules and skills together, then agents, then scope
+(this project or global). The review step previews exactly where every rule
+will land per agent before anything is written. No clone, no manual copying.
+
+**Paired rules bring their skill automatically** — selecting the `mental` rule
+always installs the `mental` skill (the always-on pointer is useless without
+the procedure it points at), no opt-out.
 
 Prefer non-interactive? Every prompt has a flag:
 
 ```bash
 npx balakit --rules global,mental --agents claude-code,cursor,cline -y   # project scope
 npx balakit --rules mental --agents all --scope global -y                # user-level, every repo
+npx balakit --rules mental --agents all --scope global --dry-run         # preview, write nothing
 npx balakit --list                                                       # browse what's available
 npx balakit --help
 ```
@@ -62,7 +67,7 @@ at either scope:
 | Codex | `AGENTS.md` (managed block, merged) | `~/.codex/AGENTS.md` (managed block) |
 | OpenCode | `AGENTS.md` (shared) | `~/.config/opencode/AGENTS.md` (managed block) |
 | GitHub Copilot | `AGENTS.md` (shared — Copilot reads it natively) | ⚠️ manual (instructions printed) |
-| Cline | `.clinerules/balakit-*.md` (one file per rule) | `~/.cline/rules/balakit-*.md` |
+| Cline | `.clinerules/balakit-*.md` (one file per rule) | `~/Documents/Cline/Rules/balakit-*.md` |
 | Kilo Code | `.kilocode/rules/balakit-*.md` | ⚠️ manual — `~/.config/kilo/kilo.jsonc` (instructions printed) |
 | omp | `AGENTS.md` (shared — AGENTS.md-compatible) | ⚠️ manual (global home unverified) |
 
@@ -101,7 +106,7 @@ enabling `alwaysApply` in a new repo.
 | `global` | Meta-principle, dual-mode communication, simplicity ladder, repo hygiene |
 | `changelog` | Changelog maintenance (grouped Features / Fixes / Changes) |
 | `comments` | Comments and JSDoc standards |
-| `mental` | The `.mental/` personal knowledge layer — always-on pointer; pairs with the `mental` skill |
+| `mental` | The `.mental/` personal knowledge layer — always-on pointer; auto-installs the `mental` skill |
 | `seo-ai-search` | SEO + AI-search implementation (file-scoped) |
 | `testing` | Testing philosophy |
 

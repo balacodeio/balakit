@@ -1,6 +1,6 @@
 {
   "name": "balakit",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Opinionated, cross-agent rules and skills for AI coding agents — one npx install into Cursor, Claude Code, Codex, OpenCode & Copilot.",
   "license": "MIT",
   "homepage": "https://github.com/balacodeio/balakit#readme",

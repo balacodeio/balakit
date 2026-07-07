@@ -7,10 +7,14 @@
  *
  * Rules are installed natively, because skills.sh installs skills only and never
  * writes rule files. Rules can be installed per-project or globally (user-level);
- * each agent's destination differs per scope — see AGENTS below. Agents whose
+ * each agent's destination differs per scope — see ruleTarget. Agents whose
  * global rules live behind a UI or a config file we won't rewrite (Cursor,
  * Copilot, Kilo Code) degrade gracefully: the installer prints exact manual
  * instructions instead of erroring.
+ *
+ * Some rules are half of a rule+skill pair (RULE_BUNDLED_SKILLS): the rule is
+ * the always-on pointer, the skill carries the procedure. Selecting such a rule
+ * installs its skill automatically — the pair is meaningless apart.
  *
  * Skills are delegated to skills.sh (`npx skills add`) so its maintained
  * per-agent path map and global locations are reused rather than reimplemented.
@@ -24,7 +28,7 @@ import {
   mkdirSync,
   existsSync,
 } from "node:fs";
-import { join, dirname, basename, relative } from "node:path";
+import { join, dirname, basename, relative, sep } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -45,8 +49,9 @@ const RULES_DIR = join(PKG_ROOT, "rules");
 const SKILLS_DIR = join(PKG_ROOT, "skills");
 
 /**
- * Supported agents. `skillsShId` is the id skills.sh expects (null = skills.sh
- * has no confirmed support; the agent is excluded from skill installs with a note).
+ * Supported agents. `skillsShId` is the id skills.sh expects (verified against
+ * `npx skills add` agent validation; null = no skills.sh support — the agent is
+ * excluded from skill installs with a note).
  */
 const AGENTS = [
   { id: "cursor", label: "Cursor", skillsShId: "cursor" },
@@ -56,9 +61,17 @@ const AGENTS = [
   { id: "copilot", label: "GitHub Copilot", skillsShId: "github-copilot" },
   { id: "cline", label: "Cline", skillsShId: "cline" },
   { id: "kilocode", label: "Kilo Code", skillsShId: "kilo" },
-  { id: "omp", label: "omp (oh-my-pi)", skillsShId: null },
+  // oh-my-pi is a distribution of the `pi` coding agent — skills.sh knows `pi`.
+  { id: "omp", label: "omp (oh-my-pi)", skillsShId: "pi" },
 ];
 const AGENT_IDS = AGENTS.map((a) => a.id);
+
+/**
+ * Rule → skills that must ship with it. The rule is the always-on pointer; the
+ * skill carries the procedure it points at. Selecting the rule always installs
+ * the skill — there is deliberately no way to opt out.
+ */
+const RULE_BUNDLED_SKILLS = { mental: ["mental"] };
 
 /** Parse one .mdc rule into frontmatter fields, raw text, and body. */
 function parseRule(file) {
@@ -78,6 +91,24 @@ function parseRule(file) {
   };
 }
 
+/** Extract a skill's description, handling YAML block scalars (`>-` etc.). */
+function skillDescription(skillMd) {
+  const m = skillMd.match(/^description:\s*(.*)$/m);
+  let description = m ? m[1].trim() : "";
+  if (/^[>|][-+]?$/.test(description)) {
+    const collected = [];
+    for (const line of skillMd.slice(m.index + m[0].length).split(/\r?\n/).slice(1)) {
+      if (/^\s+\S/.test(line)) collected.push(line.trim());
+      else if (line.trim() === "") continue;
+      else break;
+    }
+    description = collected.join(" ");
+  } else {
+    description = description.replace(/^["']|["']$/g, "");
+  }
+  return description;
+}
+
 const allRules = readdirSync(RULES_DIR)
   .filter((f) => f.endsWith(".mdc"))
   .map((f) => parseRule(join(RULES_DIR, f)))
@@ -90,21 +121,9 @@ const allSkills = readdirSync(SKILLS_DIR, { withFileTypes: true })
   .map((d) => {
     let description = "";
     try {
-      const s = readFileSync(join(SKILLS_DIR, d.name, "SKILL.md"), "utf8");
-      const m = s.match(/^description:\s*(.*)$/m);
-      description = m ? m[1].trim() : "";
-      if (/^[>|][-+]?$/.test(description)) {
-        // YAML block scalar (>- etc.) — the text is on the following indented lines.
-        const collected = [];
-        for (const line of s.slice(m.index + m[0].length).split(/\r?\n/).slice(1)) {
-          if (/^\s+\S/.test(line)) collected.push(line.trim());
-          else if (line.trim() === "") continue;
-          else break;
-        }
-        description = collected.join(" ");
-      } else {
-        description = description.replace(/^["']|["']$/g, "");
-      }
+      description = skillDescription(
+        readFileSync(join(SKILLS_DIR, d.name, "SKILL.md"), "utf8"),
+      );
     } catch {}
     return { name: d.name, description };
   })
@@ -117,6 +136,7 @@ const rel = (f) => {
   const r = relative(process.cwd(), f);
   return !r || r.startsWith("..") ? f : r;
 };
+const trunc = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 
 const BEGIN = `<!-- BEGIN ${NAME} (managed — edits inside are overwritten on reinstall) -->`;
 const END = `<!-- END ${NAME} -->`;
@@ -186,7 +206,9 @@ function ruleTarget(agentId, scope, cwd) {
       case "opencode":
         return { kind: "merge", file: join(home, ".config", "opencode", "AGENTS.md") };
       case "cline":
-        return { kind: "md-dir", dir: join(home, ".cline", "rules") };
+        // Per docs.cline.bot: global rules live in Documents/Cline/Rules
+        // (~/Cline/Rules is the documented Linux fallback).
+        return { kind: "md-dir", dir: join(home, "Documents", "Cline", "Rules") };
       case "cursor":
         return {
           kind: "manual",
@@ -230,11 +252,23 @@ function ruleTarget(agentId, scope, cwd) {
   }
 }
 
+/** One human line describing where an agent's rules will land (review preview). */
+function describeTarget(agentId, scope, cwd) {
+  const t = ruleTarget(agentId, scope, cwd);
+  const pad = agentId.padEnd(12);
+  if (t.unsupported) return `${pad} ✖ ${t.unsupported}`;
+  if (t.kind === "manual") return `${pad} ⚠ manual steps (printed after install)`;
+  if (t.kind === "mdc") return `${pad} → ${rel(t.dir)}${sep}<rule>.mdc`;
+  if (t.kind === "md-dir") return `${pad} → ${rel(t.dir)}${sep}${NAME}-<rule>.md`;
+  return `${pad} → ${rel(t.file)} (managed block)`;
+}
+
 /**
- * Install selected rules for selected agents at the given scope.
+ * Install selected rules for selected agents at the given scope. With
+ * `dryRun`, nothing is written — `written` holds the would-be paths.
  * Returns { written, skipped, manual } path/instruction lists for reporting.
  */
-function installRules(rules, agentIds, scope) {
+function installRules(rules, agentIds, scope, { dryRun = false } = {}) {
   const cwd = process.cwd();
   const block = renderRulesBlock(rules);
   const written = [];
@@ -252,24 +286,24 @@ function installRules(rules, agentIds, scope) {
       continue;
     }
     if (t.kind === "mdc") {
-      mkdirSync(t.dir, { recursive: true });
+      if (!dryRun) mkdirSync(t.dir, { recursive: true });
       for (const r of rules) {
         const dest = join(t.dir, `${r.name}.mdc`);
-        writeFileSync(dest, r.raw);
+        if (!dryRun) writeFileSync(dest, r.raw);
         written.push(rel(dest));
       }
     } else if (t.kind === "md-dir") {
-      mkdirSync(t.dir, { recursive: true });
+      if (!dryRun) mkdirSync(t.dir, { recursive: true });
       for (const r of rules) {
         // Prefixed filename so reinstalls update in place and never clobber the user's own rules.
         const dest = join(t.dir, `${NAME}-${r.name}.md`);
-        writeFileSync(dest, renderRuleMd(r));
+        if (!dryRun) writeFileSync(dest, renderRuleMd(r));
         written.push(rel(dest));
       }
     } else {
       if (mergedFiles.has(t.file)) continue; // agents sharing one AGENTS.md write once
       mergedFiles.add(t.file);
-      mergeManaged(t.file, block);
+      if (!dryRun) mergeManaged(t.file, block);
       written.push(rel(t.file));
     }
   }
@@ -305,6 +339,11 @@ function ensureMentalExcluded() {
   return `added .mental/ to global git excludes (${file})`;
 }
 
+/** Expand rule names to the skills they bundle (RULE_BUNDLED_SKILLS). */
+function bundledSkillsFor(ruleNames) {
+  return [...new Set(ruleNames.flatMap((r) => RULE_BUNDLED_SKILLS[r] ?? []))];
+}
+
 /** Build the equivalent `npx skills add` command for the chosen selection. */
 function skillsCommand(skillNames, agentIds, scope) {
   const ids = agentIds
@@ -332,21 +371,25 @@ Options:
   --rules <names|all>       Rules to install (comma-separated: ${allRules.map((r) => r.name).join(", ")})
   --skills <names|all>      Skills to install (comma-separated; see --list)
   --agents <ids|all>        Agents: ${AGENT_IDS.join(", ")}
-  --scope <project|global>  Rule install scope (default: project).
+  --scope <project|global>  Install scope for rules AND skills (default: project).
                             Global writes user-level files (e.g. ~/.claude/CLAUDE.md);
                             agents without a scriptable global home print manual steps.
-  --skills-scope <project|global>  Skill install scope (default: follows --scope)
+  --skills-scope <project|global>  Override the skill scope separately
+  --dry-run                 Show what would be written without writing anything
   -y, --yes                 Skip the confirmation prompt
   --list                    List available rules, skills, and agents
   -v, --version             Print version
   -h, --help                Show this help
+
+Paired rules install their skill automatically (e.g. the mental rule always
+brings the mental skill — the pointer is useless without the procedure).
 
 Update: re-run \`npx ${CMD}@latest\` with the same selections — managed blocks
 and installed rule files are replaced in place, never duplicated.`;
 
 /** Parse process.argv into flag values; exits early for --help/--version/--list. */
 function parseArgs(argv) {
-  const args = { yes: false };
+  const args = { yes: false, dryRun: false };
   const csv = (v) => v.split(",").map((s) => s.trim()).filter(Boolean);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -359,7 +402,7 @@ function parseArgs(argv) {
       process.exit(0);
     } else if (a === "--list") {
       console.log(`Rules:\n${allRules.map((r) => `  ${r.name} — ${r.description}`).join("\n")}`);
-      console.log(`\nSkills:\n${allSkills.map((s) => `  ${s.name} — ${s.description.slice(0, 80)}`).join("\n")}`);
+      console.log(`\nSkills:\n${allSkills.map((s) => `  ${s.name} — ${trunc(s.description, 100)}`).join("\n")}`);
       console.log(`\nAgents:\n${AGENTS.map((a) => `  ${a.id} — ${a.label}`).join("\n")}`);
       process.exit(0);
     } else if (a === "--rules") args.rules = next();
@@ -367,6 +410,7 @@ function parseArgs(argv) {
     else if (a === "--agents") args.agents = next();
     else if (a === "--scope") args.scope = next();
     else if (a === "--skills-scope") args.skillsScope = next();
+    else if (a === "--dry-run") args.dryRun = true;
     else if (a === "-y" || a === "--yes") args.yes = true;
     else {
       console.error(`Unknown option: ${a}\n`);
@@ -395,50 +439,43 @@ function parseArgs(argv) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  p.intro(`${CMD} v${pkg.version} — opinionated rules & skills installer`);
+  p.intro(`${CMD} v${pkg.version} — rules & skills for your coding agents${args.dryRun ? "  [dry-run]" : ""}`);
 
-  let selectedRules;
-  let selectedSkills;
+  let ruleNames;
+  let skillNames;
 
   if (args.rules || args.skills) {
-    selectedRules = allRules.filter((r) => (args.rules ?? []).includes(r.name));
-    selectedSkills = args.skills ?? [];
+    ruleNames = args.rules ?? [];
+    skillNames = args.skills ?? [];
   } else {
-    const kinds = await p.multiselect({
-      message: "What do you want to install?",
-      options: [
-        { value: "rules", label: "Rules", hint: "coding & communication standards" },
-        { value: "skills", label: "Skills", hint: "reusable agent capabilities (via skills.sh)" },
-      ],
+    const picked = await p.groupMultiselect({
+      message: "Pick what to install (space to select, enter to confirm)",
+      options: {
+        Rules: allRules.map((r) => ({
+          value: `rule:${r.name}`,
+          label: r.name,
+          hint: trunc(r.description, 64),
+        })),
+        Skills: allSkills.map((s) => ({
+          value: `skill:${s.name}`,
+          label: s.name,
+          hint: trunc(s.description, 64),
+        })),
+      },
       required: true,
     });
-    if (p.isCancel(kinds)) return p.cancel("Cancelled.");
+    if (p.isCancel(picked)) return p.cancel("Cancelled.");
+    ruleNames = picked.filter((v) => v.startsWith("rule:")).map((v) => v.slice(5));
+    skillNames = picked.filter((v) => v.startsWith("skill:")).map((v) => v.slice(6));
+  }
 
-    selectedRules = [];
-    if (kinds.includes("rules")) {
-      const picked = await p.multiselect({
-        message: "Which rules?",
-        options: allRules.map((r) => ({ value: r.name, label: r.name, hint: r.description })),
-        required: true,
-      });
-      if (p.isCancel(picked)) return p.cancel("Cancelled.");
-      selectedRules = allRules.filter((r) => picked.includes(r.name));
-    }
+  // Paired rules bring their skill — always, silently added, surfaced in Review.
+  const bundled = bundledSkillsFor(ruleNames).filter((s) => !skillNames.includes(s));
+  skillNames = [...skillNames, ...bundled];
+  const selectedRules = allRules.filter((r) => ruleNames.includes(r.name));
 
-    selectedSkills = [];
-    if (kinds.includes("skills")) {
-      const picked = await p.multiselect({
-        message: "Which skills?",
-        options: allSkills.map((s) => ({
-          value: s.name,
-          label: s.name,
-          hint: s.description ? s.description.slice(0, 64) : undefined,
-        })),
-        required: true,
-      });
-      if (p.isCancel(picked)) return p.cancel("Cancelled.");
-      selectedSkills = picked;
-    }
+  if (!selectedRules.length && !skillNames.length) {
+    return p.cancel("Nothing selected.");
   }
 
   let agents = args.agents;
@@ -452,84 +489,96 @@ async function main() {
     agents = picked;
   }
 
-  let rulesScope = args.scope ?? "project";
-  if (selectedRules.length && !args.scope && !args.yes) {
+  let scope = args.scope ?? "project";
+  if (!args.scope && !args.yes) {
     const picked = await p.select({
-      message: "Install rules where?",
+      message: "Install where?",
       initialValue: "project",
       options: [
-        { value: "project", label: "This project", hint: process.cwd() },
+        {
+          value: "project",
+          label: "This project",
+          hint: process.cwd(),
+        },
         {
           value: "global",
           label: "Global (user-level)",
-          hint: "applies to every repo — e.g. ~/.claude/CLAUDE.md",
+          hint: "every repo on this machine — rules to user config, skills via skills.sh -g",
         },
       ],
     });
     if (p.isCancel(picked)) return p.cancel("Cancelled.");
-    rulesScope = picked;
+    scope = picked;
   }
+  const skillsScope = args.skillsScope ?? scope;
 
-  let skillsScope = args.skillsScope ?? args.scope ?? "project";
-  if (selectedSkills.length && !args.skillsScope && !args.scope && !args.yes) {
-    const picked = await p.select({
-      message: "Install skills where?",
-      initialValue: "project",
-      options: [
-        { value: "project", label: "This project", hint: process.cwd() },
-        { value: "global", label: "Global (user-level)", hint: "via skills.sh" },
-      ],
-    });
-    if (p.isCancel(picked)) return p.cancel("Cancelled.");
-    skillsScope = picked;
+  const reviewLines = [];
+  if (selectedRules.length) {
+    reviewLines.push(`Rules   (${scope}): ${selectedRules.map((r) => r.name).join(", ")}`);
   }
+  if (skillNames.length) {
+    const label = (s) => (bundled.includes(s) ? `${s} (bundled with the ${s} rule)` : s);
+    reviewLines.push(`Skills  (${skillsScope}): ${skillNames.map(label).join(", ")}`);
+  }
+  reviewLines.push(`Agents: ${agents.join(", ")}`);
+  if (selectedRules.length) {
+    reviewLines.push("", "Rule destinations:");
+    for (const a of agents) reviewLines.push(`  ${describeTarget(a, scope, process.cwd())}`);
+  }
+  p.note(reviewLines.join("\n"), args.dryRun ? "Review (dry-run — nothing will be written)" : "Review");
 
-  p.note(
-    [
-      selectedRules.length
-        ? `Rules:  ${selectedRules.map((r) => r.name).join(", ")} (${rulesScope})`
-        : null,
-      selectedSkills.length ? `Skills: ${selectedSkills.join(", ")} (${skillsScope})` : null,
-      `Agents: ${agents.join(", ")}`,
-    ]
-      .filter(Boolean)
-      .join("\n"),
-    "Review",
-  );
-  if (!args.yes) {
+  if (!args.yes && !args.dryRun) {
     const go = await p.confirm({ message: "Install now?" });
     if (p.isCancel(go) || !go) return p.cancel("Cancelled.");
   }
 
   if (selectedRules.length) {
     const s = p.spinner();
-    s.start("Installing rules");
-    const { written, skipped, manual } = installRules(selectedRules, agents, rulesScope);
-    s.stop(`Rules installed (${written.length} file${written.length === 1 ? "" : "s"})`);
-    if (written.length) p.note(written.join("\n"), "Wrote");
+    s.start(args.dryRun ? "Resolving rule targets" : "Installing rules");
+    const { written, skipped, manual } = installRules(selectedRules, agents, scope, {
+      dryRun: args.dryRun,
+    });
+    s.stop(
+      args.dryRun
+        ? `Would write ${written.length} file${written.length === 1 ? "" : "s"}`
+        : `Rules installed (${written.length} file${written.length === 1 ? "" : "s"})`,
+    );
+    if (written.length) p.note(written.join("\n"), args.dryRun ? "Would write" : "Wrote");
     if (manual.length) p.note(manual.join("\n\n"), "Manual steps (not scriptable)");
     if (skipped.length) p.note(skipped.join("\n"), "Skipped");
     if (selectedRules.some((r) => r.name === "mental")) {
-      const report = ensureMentalExcluded();
-      p.log.step(report ?? "git not found — add `.mental/` to your global git excludes manually.");
+      if (args.dryRun) {
+        p.log.step("Would ensure .mental/ is in the global git excludes (core.excludesFile).");
+      } else {
+        const report = ensureMentalExcluded();
+        p.log.step(report ?? "git not found — add `.mental/` to your global git excludes manually.");
+      }
     }
   }
 
-  if (selectedSkills.length) {
+  if (skillNames.length) {
     const noSkills = agents.filter((a) => !AGENTS.find((x) => x.id === a)?.skillsShId);
     if (noSkills.length) {
       p.log.warn(`skills.sh has no confirmed support for: ${noSkills.join(", ")} — skipped for skills.`);
     }
-    const cmd = skillsCommand(selectedSkills, agents, skillsScope);
-    p.log.step(`Installing skills via skills.sh:\n${cmd}`);
-    const result = spawnSync(cmd, { stdio: "inherit", shell: true });
-    if (result.status !== 0) {
-      p.log.warn("skills.sh did not complete. Run this manually when ready:");
-      p.log.message(cmd);
+    const cmd = skillsCommand(skillNames, agents, skillsScope);
+    if (args.dryRun) {
+      p.log.step(`Would install skills via skills.sh:\n${cmd}`);
+    } else {
+      p.log.step(`Installing skills via skills.sh:\n${cmd}`);
+      const result = spawnSync(cmd, { stdio: "inherit", shell: true });
+      if (result.status !== 0) {
+        p.log.warn("skills.sh did not complete. Run this manually when ready:");
+        p.log.message(cmd);
+      }
     }
   }
 
-  p.outro(`Done. Update anytime: npx ${CMD}@latest`);
+  p.outro(
+    args.dryRun
+      ? `Dry-run complete — nothing written. Drop --dry-run to install.`
+      : `Done. Update anytime: npx ${CMD}@latest`,
+  );
 }
 
 export {
@@ -537,10 +586,14 @@ export {
   renderRuleMd,
   mergeManaged,
   ruleTarget,
+  describeTarget,
   installRules,
   ensureMentalExcluded,
+  bundledSkillsFor,
   skillsCommand,
+  skillDescription,
   parseArgs,
+  RULE_BUNDLED_SKILLS,
 };
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
