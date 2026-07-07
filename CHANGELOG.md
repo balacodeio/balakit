@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.5.2]
+
+### Fixes
+- **Bundled skills are now visible in the interactive flow** — selecting the `mental` rule looked like it left the `mental` skill unselected (the auto-add only surfaced later, in Review). The skill's picker entry now carries an "auto-installs with the mental rule — no need to select it here" hint, and the moment selection resolves the CLI announces `mental skill added automatically (bundled with the mental rule)`.
+
 ## [v1.5.1]
 
 ### Changes

@@ -81,6 +81,15 @@ const RULE_BUNDLED_SKILLS = { mental: ["mental"] };
  */
 const PERSONAL_RULES = ["mental"];
 
+/** Reverse of RULE_BUNDLED_SKILLS: skill name → rules that bundle it. */
+const SKILL_BUNDLED_BY = Object.entries(RULE_BUNDLED_SKILLS).reduce(
+  (m, [rule, skills]) => {
+    for (const s of skills) (m[s] ??= []).push(rule);
+    return m;
+  },
+  {},
+);
+
 /** Parse one .mdc rule into frontmatter fields, raw text, and body. */
 function parseRule(file) {
   const raw = readFileSync(file, "utf8");
@@ -471,7 +480,9 @@ async function main() {
         Skills: allSkills.map((s) => ({
           value: `skill:${s.name}`,
           label: s.name,
-          hint: trunc(s.description, 64),
+          hint: SKILL_BUNDLED_BY[s.name]
+            ? `auto-installs with the ${SKILL_BUNDLED_BY[s.name].join("/")} rule — no need to select it here`
+            : trunc(s.description, 64),
         })),
       },
       required: true,
@@ -481,10 +492,18 @@ async function main() {
     skillNames = picked.filter((v) => v.startsWith("skill:")).map((v) => v.slice(6));
   }
 
-  // Paired rules bring their skill — always, silently added, surfaced in Review.
+  // Paired rules bring their skill — always. Announce the auto-add right away
+  // so the unchecked box in the picker never reads as "skill not included".
   const bundled = bundledSkillsFor(ruleNames).filter((s) => !skillNames.includes(s));
   skillNames = [...skillNames, ...bundled];
   const selectedRules = allRules.filter((r) => ruleNames.includes(r.name));
+  if (bundled.length) {
+    p.log.info(
+      bundled
+        .map((s) => `${s} skill added automatically (bundled with the ${SKILL_BUNDLED_BY[s].join("/")} rule)`)
+        .join("\n"),
+    );
+  }
 
   if (!selectedRules.length && !skillNames.length) {
     return p.cancel("Nothing selected.");
