@@ -1,21 +1,25 @@
 ---
 name: mental
 description: >-
-  Maintain a repo's .mental/ folder — the user's private, gitignored second-brain
-  (an Open Knowledge Format bundle) that keeps them oriented: where the project
-  stands, what they decided and why, what they accomplished, and where to resume.
-  Use when a .mental/ directory exists in the repo root; when the user asks
-  "where are we", "where did I leave off", "what's remaining", "what did I
-  decide/accomplish"; when substantive work wraps (append a journal entry); when
-  a decision is made, deferred, or surfaced; or when the user asks to set up,
-  bootstrap, or survey a .mental bundle.
+  Maintain a repo's .mental/ folder — the user's private, gitignored, per-repo
+  second-brain (an Open Knowledge Format bundle) that keeps them oriented: where
+  the project stands, what they decided and why, what they accomplished, and
+  where to resume. Create it on first substantive work in a repo that lacks one;
+  consult it before non-trivial work; journal after. Use when beginning
+  substantive work in a repo (create .mental/ if absent, else re-orient); when a
+  .mental/ directory exists; when the user asks "where are we", "where did I
+  leave off", "what's remaining", "what did I decide/accomplish"; when
+  substantive work wraps (append a journal entry); when a decision is made,
+  deferred, or surfaced; or when the user asks to set up or survey a .mental bundle.
 user-invocable: true
 disable-model-invocation: false
-version: "1.0.0"
+version: "1.1.0"
 author: "Ali Farahat"
 tags: ["memory", "knowledge", "journal", "okf", "orientation", "second-brain"]
 when_to_use: |
   USE WHEN:
+  - You begin substantive work in a repo — if `.mental/` is absent, create it
+    (skeleton + first journal entry); if it exists, re-orient from it first.
   - A `.mental/` directory exists in the repo root (consult before non-trivial
     work; journal after substantive work).
   - The user asks any orientation question: "where are we with this project?",
@@ -27,8 +31,8 @@ when_to_use: |
   - The user asks to initialize `.mental/` or run the bootstrap survey.
 
   DO NOT USE WHEN:
-  - No `.mental/` directory exists and the user hasn't asked to create one —
-    never scaffold it unprompted.
+  - The turn is read-only or trivial (a quick question, a one-line lookup) —
+    don't create `.mental/` or journal for it; wait for real work.
   - The knowledge is cross-repo/personal (who the user is, global preferences) —
     that belongs in the agent's own memory system, not `.mental/`.
 ---
@@ -47,13 +51,33 @@ will this help them re-orient in two weeks?
 It answers, at any moment: *Where am I? What did I decide, and why? What did I
 actually accomplish? Where do I resume?*
 
-## Format — an OKF bundle
+## Format — the OKF bundle (self-contained spec)
 
-`.mental/` is an [Open Knowledge Format](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing)
-bundle: markdown + YAML frontmatter + directory hierarchy + a markdown-link graph.
-**File path = identity** — never move a file to retire it; flip `status: superseded`
-in place (moving breaks inbound links). Standard markdown links, e.g.
-`[the auth decision](/decisions/2026-07-07-adopt-jwt.md)`.
+`.mental/` follows the **Open Knowledge Format** — a minimal, portable convention
+for a knowledge base that is equally readable by a human and an agent. Its rules,
+in full (you do not need any external reference):
+
+1. **Just files.** Every concept is one markdown file. No database, no SDK, no
+   runtime — the bundle is a directory tree you can read, grep, and diff.
+2. **YAML frontmatter carries the metadata.** `type` is the *only* required
+   field. Beyond it, a producer defines its own fields — this bundle uses
+   `title`, `description`, `tags`, `timestamp`, and a `status` extension.
+3. **Directory hierarchy groups by concept type.** `status/`, `decisions/`,
+   `journal/`, `notes/`, `areas/`, `plans/`, `docs/` — the folder says what kind
+   of concept lives there.
+4. **File path = concept identity.** A concept is addressed by its path. So you
+   **never move a file to retire it** (that breaks inbound links) — instead flip
+   `status: superseded` in place.
+5. **Concepts link into a graph** with standard markdown links, e.g.
+   `[the auth decision](/decisions/2026-07-07-adopt-jwt.md)` — rooted at the
+   bundle. This graph, not folders alone, is how knowledge connects.
+6. **Two reserved filenames.** `index.md` = a directory's entry point and
+   navigation (progressive disclosure); `log.md` = optional chronological history
+   for a directory. Everything else is a normal concept file.
+7. **Human- and machine-first, both.** Write for a person skimming in two weeks
+   *and* an agent parsing frontmatter — plain, legible, structured.
+
+Concretely, `.mental/` lays out as:
 
 ```
 .mental/
@@ -137,23 +161,36 @@ git history already states plainly, or what won't matter beyond today. Add an
 documents get a `Document` concept wrapping the asset with a summary +
 `resource:` link. Keep `index.md` navigation current as concepts are added.
 
-### 5. Bootstrap — seed the present (optional survey)
+### 5. Bootstrap — create it on first substantive work
 
-Setting up `.mental/` happens only on explicit request. Two levels:
+**When you begin substantive work in a repo and `.mental/` does not exist, create
+it — automatically, without being asked.** It is gitignored (via the user's
+global git excludes), so it never touches commits and creating it is harmless.
+This is where the layer "kicks in": the first real task in each repo. Do **not**
+create it for a read-only or trivial turn (a quick question, a one-line lookup) —
+wait until there is actual work to record.
 
-- **Skeleton** (default): create the directory tree + `index.md` from
-  [references/templates.md](references/templates.md). Done — it grows from
-  forward work.
-- **Survey** (opt-in, when asked): read ground truth — git state, README, open
-  PRs, CLAUDE.md/ADRs, code layout — and seed the **present**: a rich
+Two levels:
+
+- **Skeleton** (default, automatic): create the directory tree + `index.md` +
+  `status/current.md` from [references/templates.md](references/templates.md),
+  then write the first `journal/<YYYY-MM-DD>.md` entry for the work you're doing.
+  It grows from forward work.
+- **Survey** (richer; when the user asks, or when it clearly helps to seed a
+  larger existing project): also read ground truth — git state, README, open
+  PRs, CLAUDE.md/ADRs, code layout — and seed the **present**: a fuller
   `status/current.md`, only **high-confidence** decisions/notes (mark
-  observed-vs-inferred; never fabricate rationale), and a first journal entry
-  ("Bootstrapped from repo survey"). Do **not** reconstruct history — git holds it.
+  observed-vs-inferred; never fabricate rationale). Do **not** reconstruct
+  history — git holds it.
+
+Mention in one line that you created `.mental/` so the user knows it exists.
 
 ## Guardrails
 
-- **Never rely on it** — `.mental/` is a bonus when present, never a
-  precondition; it is absent in CI and on other machines. Never block work on it.
+- **Per-repo, never global** — every repo gets its own `.mental/`; there is no
+  shared/global bundle. It is absent in CI and on other machines, so never treat
+  it as a precondition or block work on it — create it when missing, use it when
+  present.
 - **Never touch `.gitignore`** — `.mental/` is ignored machine-wide via the
   user's global git excludes (set up by the balakit installer). Don't check,
   create, or edit ignore files for it.

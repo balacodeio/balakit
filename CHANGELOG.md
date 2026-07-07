@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.7.0]
+
+### Fixes
+- **`.mental/` now actually gets created.** Previously the rule/skill said "if `.mental/` is absent, do nothing — never scaffold unprompted," so the folder never came into existence and the layer never "kicked in." The agent now **creates the per-repo `.mental/` automatically on its first substantive work** in a repo (skeleton + first journal entry) — it's gitignored, so creation never touches commits. Read-only/trivial turns still don't trigger it.
+- **OKF spec is now self-contained.** The `mental` skill previously linked out to Google Cloud's Open Knowledge Format blog post for the format it depends on. The full OKF format spec (files-only, `type`-required frontmatter, path-as-identity, markdown-link graph, reserved `index.md`/`log.md`) is now inlined in the skill; the external URL is removed from the rule and skill.
+
+### Changes
+- Reworded the rule + skill to emphasize `.mental/` is **per-repo, never global** (only the rule/skill *wiring* is global) and to drop the "never create unprompted" guard in favor of "create on first substantive work, skip trivial turns."
+
 ## [v1.6.0]
 
 ### Features

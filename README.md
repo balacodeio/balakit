@@ -123,12 +123,15 @@ enabling `alwaysApply` in a new repo.
 ### The `.mental/` personal knowledge layer
 
 `mental` (rule + skill) teaches agents to maintain a **private, gitignored,
-per-repo second-brain** — an [Open Knowledge Format](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing)
-bundle at `.mental/` that keeps *you* oriented: where the project stands, what
-you decided and why, what you accomplished, where to resume after weeks away.
-Agents re-orient from it before non-trivial work, journal after substantive
-work, and record decisions — deriving "where are we" from git + the journal +
-open decisions rather than maintaining rot-prone to-do lists.
+per-repo second-brain** — an Open Knowledge Format bundle at `.mental/` (the
+skill carries the full format spec — no external dependency) that keeps *you*
+oriented: where the project stands, what you decided and why, what you
+accomplished, where to resume after weeks away. The agent **creates `.mental/`
+automatically on its first substantive work in a repo** (it's gitignored, so it
+never touches commits), then re-orients from it before non-trivial work,
+journals after, and records decisions — deriving "where are we" from git + the
+journal + open decisions rather than maintaining rot-prone to-do lists. Each
+repo gets its own `.mental/`; there is no global bundle.
 
 Installing the `mental` rule also idempotently adds `.mental/` to your **global
 git excludes** (`core.excludesFile`), so the folder is ignored in every repo on
