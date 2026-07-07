@@ -200,6 +200,11 @@ When documentation strings are generated into a public API surface (OpenAPI/Swag
 - Map each endpoint/handler summary to the generated summary and description.
 - Declare at least one example response for each public route.
 
+<!-- from rules/mental.mdc -->
+## The `.mental/` Personal Knowledge Layer
+
+If the repo root contains a **`.mental/`** directory, it is the user's private, gitignored second-brain for this repo — an [OKF](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing) bundle the agent maintains as the user's scribe. Before non-trivial work, re-orient from `.mental/status/current.md` — or derive the current state fresh from the latest `journal/` entry's `Resume:` line + git state (branch, recent commits, diff, open PRs) + `decisions/` with `status: open|deferred`. After substantive work, append one consolidated entry to `.mental/journal/<YYYY-MM-DD>.md` ending with a `Resume:` line (next action + open loops). Record decisions — including deferred ones — as concepts in `decisions/`; curate durable, non-obvious, repo-specific facts into `notes/` freely. Full procedure, structure, and templates: the **`mental` skill**. Never rely on `.mental/` existing (absent in CI and on other machines), never surface its contents in commits/PRs or anything leaving the machine, and never touch `.gitignore` for it — it is ignored machine-wide via the user's global git excludes. If `.mental/` is absent, this rule is a no-op — do not create it unprompted.
+
 <!-- from rules/testing.mdc -->
 ## Testing
 

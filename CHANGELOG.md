@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.4.0]
+
+### Features
+- **`.mental/` personal knowledge layer** — new `mental` rule + `mental` skill pair. The rule is a one-paragraph always-on pointer; the skill carries the full procedure for maintaining a private, gitignored, per-repo second-brain as an [Open Knowledge Format](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing) bundle: derived status (no rot-prone to-do lists — "where are we" is reconstructed from git + the journal's Resume lines + open decisions), boundary-triggered journaling, decision concepts with an open→deferred→decided lifecycle, free curation of durable repo facts, and an optional bootstrap survey that seeds the present without fabricating history. Design rationale in `docs/mental-design.md`.
+- **Three new agents** — Cline (`.clinerules/`), Kilo Code (`.kilocode/rules/`), and omp (AGENTS.md-compatible) join Cursor, Claude Code, Codex, OpenCode, and Copilot as rule-install targets. Cline/Kilo get one plain `.md` file per rule (`balakit-<name>.md`, updated in place on reinstall).
+- **Global (user-level) rule installs** — rules can now install to each agent's user config (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.config/opencode/AGENTS.md`, `~/.cline/rules/`) via a new scope prompt / `--scope global`. Agents without a scriptable global home (Cursor's Settings UI, Copilot, Kilo's `kilo.jsonc`) degrade gracefully: exact manual instructions are printed instead of erroring.
+- **Non-interactive CLI** — every prompt now has a flag: `--rules`, `--skills`, `--agents` (each accepting `all`), `--scope`, `--skills-scope`, `-y/--yes`, plus `--list`, `--help`, `--version`. Interactive mode is unchanged when no selection flags are given.
+- **Global git excludes for `.mental/`** — installing the `mental` rule idempotently wires `core.excludesFile` (creating `~/.gitignore` only when unset) and appends `.mental/`, so the folder is ignored machine-wide without touching any project's `.gitignore`.
+
+### Changes
+- Rules are no longer hard-locked to project scope; the README's guidance now frames scope as a deliberate choice (project conventions stay project-scoped; personal layers like `mental` go global).
+- Installer review/outro messaging now surfaces the chosen rule scope and the `npx balakit@latest` update path.
+- Agents without confirmed skills.sh support are excluded from skill installs with a printed note instead of failing the whole install.
+
 ## [v1.3.0]
 
 ### Features
