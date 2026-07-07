@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.5.1]
+
+### Changes
+- **Personal-rule scope guard** — `mental` is now marked as a personal-layer rule. The interactive scope prompt defaults it to Global (with hints explaining why); with `-y` and no `--scope` it installs globally when it's the whole selection; and any project-scope install prints a warning that project scope writes the rule into committed files (`CLAUDE.md`/`AGENTS.md`/rule dirs) — only the `.mental/` data folder is gitignored, never the rule wiring. Mixed selections (personal + team rules) keep the project default so team rules are never silently routed into user config.
+
 ## [v1.5.0]
 
 ### Features

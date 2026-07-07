@@ -27,6 +27,12 @@ will land per agent before anything is written. No clone, no manual copying.
 always installs the `mental` skill (the always-on pointer is useless without
 the procedure it points at), no opt-out.
 
+**Personal-layer rules steer to global scope** — `mental` describes *your*
+workflow, not the repo's, so the scope prompt defaults it to Global, and
+installing it at project scope warns: project scope writes the rule into
+committed files (`CLAUDE.md`/`AGENTS.md`) that teammates see. Only the
+`.mental/` data folder is gitignored — never the rule wiring.
+
 Prefer non-interactive? Every prompt has a flag:
 
 ```bash

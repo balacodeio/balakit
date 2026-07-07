@@ -73,6 +73,14 @@ const AGENT_IDS = AGENTS.map((a) => a.id);
  */
 const RULE_BUNDLED_SKILLS = { mental: ["mental"] };
 
+/**
+ * Personal-layer rules — meaningful to one user's machine, not to a team.
+ * The scope prompt defaults these to global, and a project-scope install warns:
+ * project scope writes the rule into committed files (CLAUDE.md / AGENTS.md /
+ * rule dirs) that everyone in the repo sees.
+ */
+const PERSONAL_RULES = ["mental"];
+
 /** Parse one .mdc rule into frontmatter fields, raw text, and body. */
 function parseRule(file) {
   const raw = readFileSync(file, "utf8");
@@ -384,6 +392,10 @@ Options:
 Paired rules install their skill automatically (e.g. the mental rule always
 brings the mental skill — the pointer is useless without the procedure).
 
+Personal-layer rules (${PERSONAL_RULES.join(", ")}) default to GLOBAL scope —
+with -y and no --scope they install globally when they're the whole selection,
+and a project-scope install warns: it writes into committed repo files.
+
 Update: re-run \`npx ${CMD}@latest\` with the same selections — managed blocks
 and installed rule files are replaced in place, never duplicated.`;
 
@@ -489,21 +501,32 @@ async function main() {
     agents = picked;
   }
 
-  let scope = args.scope ?? "project";
+  const personal = selectedRules
+    .filter((r) => PERSONAL_RULES.includes(r.name))
+    .map((r) => r.name);
+  // Steer to global only when the whole selection is personal — a mixed pick
+  // must not silently route team rules into the user's config.
+  const allPersonal = personal.length > 0 && personal.length === selectedRules.length;
+
+  let scope = args.scope ?? (args.yes && allPersonal ? "global" : "project");
   if (!args.scope && !args.yes) {
     const picked = await p.select({
       message: "Install where?",
-      initialValue: "project",
+      initialValue: allPersonal ? "global" : "project",
       options: [
         {
           value: "project",
           label: "This project",
-          hint: process.cwd(),
+          hint: personal.length
+            ? `writes ${personal.join(", ")} into committed files (CLAUDE.md/AGENTS.md) — teammates will see it`
+            : process.cwd(),
         },
         {
           value: "global",
           label: "Global (user-level)",
-          hint: "every repo on this machine — rules to user config, skills via skills.sh -g",
+          hint: personal.length
+            ? `recommended for ${personal.join(", ")} — personal layer, every repo, zero repo impact`
+            : "every repo on this machine — rules to user config, skills via skills.sh -g",
         },
       ],
     });
@@ -511,6 +534,12 @@ async function main() {
     scope = picked;
   }
   const skillsScope = args.skillsScope ?? scope;
+
+  if (scope === "project" && personal.length) {
+    p.log.warn(
+      `${personal.join(", ")}: personal-layer rule${personal.length > 1 ? "s" : ""} at PROJECT scope — this writes into committed files (CLAUDE.md / AGENTS.md / rule dirs) that everyone in the repo sees. Only the .mental/ data folder is gitignored, never the rule wiring. Most setups want --scope global.`,
+    );
+  }
 
   const reviewLines = [];
   if (selectedRules.length) {
@@ -594,6 +623,7 @@ export {
   skillDescription,
   parseArgs,
   RULE_BUNDLED_SKILLS,
+  PERSONAL_RULES,
 };
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
