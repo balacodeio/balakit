@@ -7,10 +7,10 @@
  *
  * Rules are installed natively, because skills.sh installs skills only and never
  * writes rule files. Rules can be installed per-project or globally (user-level);
- * each agent's destination differs per scope — see ruleTarget. Agents whose
- * global rules live behind a UI or a config file we won't rewrite (Cursor,
- * Copilot, Kilo Code) degrade gracefully: the installer prints exact manual
- * instructions instead of erroring.
+ * each agent's destination differs per scope — see ruleTarget. Every agent has
+ * an automated destination at both scopes; targets with platform caveats
+ * (e.g. Cursor's workspace-less global-rules bug) carry a `note` surfaced
+ * after install.
  *
  * Some rules are half of a rule+skill pair (RULE_BUNDLED_SKILLS): the rule is
  * the always-on pointer, the skill carries the procedure. Selecting such a rule
@@ -175,6 +175,43 @@ function renderRulesBlock(rules) {
   return parts.join("\n").trim();
 }
 
+/**
+ * Render one rule as a VS Code Copilot instructions file
+ * (User/prompts/*.instructions.md). `applyTo` carries the rule's globs, or
+ * `**` for always-apply rules.
+ */
+function renderRuleInstructionsMd(r) {
+  return [
+    "---",
+    `applyTo: "${!r.always && r.globs ? r.globs : "**"}"`,
+    `description: ${r.description}`,
+    "---",
+    "",
+    `<!-- ${NAME}: ${r.name} — re-run \`npx ${CMD}@latest\` to update -->`,
+    "",
+    r.body,
+    "",
+  ].join("\n");
+}
+
+/**
+ * Resolve the VS Code user-config dir for Copilot user-level instructions.
+ * Prefers an existing installation variant; falls back to stable VS Code.
+ */
+function vscodeUserDir() {
+  const home = homedir();
+  const base =
+    process.platform === "win32"
+      ? process.env.APPDATA ?? join(home, "AppData", "Roaming")
+      : process.platform === "darwin"
+        ? join(home, "Library", "Application Support")
+        : process.env.XDG_CONFIG_HOME ?? join(home, ".config");
+  for (const variant of ["Code", "Code - Insiders", "VSCodium"]) {
+    if (existsSync(join(base, variant, "User"))) return join(base, variant, "User");
+  }
+  return join(base, "Code", "User");
+}
+
 /** Render one rule as a standalone plain-.md file (Cline / Kilo Code rule dirs). */
 function renderRuleMd(r) {
   const parts = [
@@ -207,10 +244,11 @@ function mergeManaged(file, content) {
  * Resolve where a given agent's rules live for a scope.
  *
  * Returns one of:
- *   { kind: "mdc",    dir }   — verbatim .mdc files (Cursor project rules)
+ *   { kind: "mdc",    dir }   — verbatim .mdc files (Cursor rules dirs)
  *   { kind: "merge",  file }  — managed block merged into a standing-context file
  *   { kind: "md-dir", dir }   — one plain .md file per rule (Cline / Kilo Code)
- *   { kind: "manual", why }   — not scriptable; `why` is printed as instructions
+ *   { kind: "instructions-dir", dir } — VS Code *.instructions.md (Copilot user profile)
+ * Any target may carry `note` — a caveat surfaced to the user after install.
  */
 function ruleTarget(agentId, scope, cwd) {
   const home = homedir();
@@ -227,25 +265,28 @@ function ruleTarget(agentId, scope, cwd) {
         // (~/Cline/Rules is the documented Linux fallback).
         return { kind: "md-dir", dir: join(home, "Documents", "Cline", "Rules") };
       case "cursor":
+        // Cursor's reliable global store is the Settings UI (internal,
+        // cloud-synced — not safely writable). ~/.cursor/rules is the
+        // file-based location: applied when a workspace is open, but a
+        // forum-tracked bug skips it in workspace-less agent sessions.
         return {
-          kind: "manual",
-          why: "Cursor user-level rules live in a UI, not a file: Cursor Settings → Rules → User Rules. Paste the rule content there (rule sources: " + RULES_DIR + ").",
+          kind: "mdc",
+          dir: join(home, ".cursor", "rules"),
+          note: "cursor: global rules written to ~/.cursor/rules — Cursor applies these when a project/workspace is open; workspace-less Agent sessions may skip them (known Cursor bug). For belt-and-braces, mirror them in Cursor Settings → Rules.",
         };
       case "copilot":
-        return {
-          kind: "manual",
-          why: "Copilot has no global instructions file. Use per-project installs (AGENTS.md), or VS Code profile-level instructions.",
-        };
+        // VS Code user-profile instructions: User/prompts/*.instructions.md
+        // with applyTo frontmatter applies across all workspaces.
+        return { kind: "instructions-dir", dir: join(vscodeUserDir(), "prompts") };
       case "kilocode":
-        return {
-          kind: "manual",
-          why: "Kilo Code global rules live in ~/.config/kilo/kilo.jsonc — add the rule file(s) to its `instructions` array manually (rule sources: " + RULES_DIR + ").",
-        };
+        // ~/.kilocode/rules is Kilo's global rules dir — still auto-included
+        // by v7 alongside the newer kilo.jsonc `instructions` mechanism.
+        return { kind: "md-dir", dir: join(home, ".kilocode", "rules") };
       case "omp":
-        return {
-          kind: "manual",
-          why: "omp's global rules location is unverified. Use per-project installs (AGENTS.md) until confirmed.",
-        };
+        // omp's user config home is ~/.omp/agent (models.yml lives there);
+        // as a pi fork it loads the global AGENTS.md from its agent dir,
+        // mirroring pi's ~/.pi/agent/AGENTS.md convention.
+        return { kind: "merge", file: join(home, ".omp", "agent", "AGENTS.md") };
       default:
         return { unsupported: `Unknown agent: ${agentId}` };
     }
@@ -274,23 +315,25 @@ function describeTarget(agentId, scope, cwd) {
   const t = ruleTarget(agentId, scope, cwd);
   const pad = agentId.padEnd(12);
   if (t.unsupported) return `${pad} ✖ ${t.unsupported}`;
-  if (t.kind === "manual") return `${pad} ⚠ manual steps (printed after install)`;
   if (t.kind === "mdc") return `${pad} → ${rel(t.dir)}${sep}<rule>.mdc`;
   if (t.kind === "md-dir") return `${pad} → ${rel(t.dir)}${sep}${NAME}-<rule>.md`;
+  if (t.kind === "instructions-dir")
+    return `${pad} → ${rel(t.dir)}${sep}${NAME}-<rule>.instructions.md`;
   return `${pad} → ${rel(t.file)} (managed block)`;
 }
 
 /**
  * Install selected rules for selected agents at the given scope. With
  * `dryRun`, nothing is written — `written` holds the would-be paths.
- * Returns { written, skipped, manual } path/instruction lists for reporting.
+ * Returns { written, skipped, notes } lists for reporting; `notes` carries
+ * per-target caveats (e.g. Cursor's workspace-less global-rules bug).
  */
 function installRules(rules, agentIds, scope, { dryRun = false } = {}) {
   const cwd = process.cwd();
   const block = renderRulesBlock(rules);
   const written = [];
   const skipped = [];
-  const manual = [];
+  const notes = [];
   const mergedFiles = new Set();
   for (const a of agentIds) {
     const t = ruleTarget(a, scope, cwd);
@@ -298,15 +341,19 @@ function installRules(rules, agentIds, scope, { dryRun = false } = {}) {
       skipped.push(`${a}: ${t.unsupported}`);
       continue;
     }
-    if (t.kind === "manual") {
-      manual.push(`${a}: ${t.why}`);
-      continue;
-    }
+    if (t.note) notes.push(t.note);
     if (t.kind === "mdc") {
       if (!dryRun) mkdirSync(t.dir, { recursive: true });
       for (const r of rules) {
         const dest = join(t.dir, `${r.name}.mdc`);
         if (!dryRun) writeFileSync(dest, r.raw);
+        written.push(rel(dest));
+      }
+    } else if (t.kind === "instructions-dir") {
+      if (!dryRun) mkdirSync(t.dir, { recursive: true });
+      for (const r of rules) {
+        const dest = join(t.dir, `${NAME}-${r.name}.instructions.md`);
+        if (!dryRun) writeFileSync(dest, renderRuleInstructionsMd(r));
         written.push(rel(dest));
       }
     } else if (t.kind === "md-dir") {
@@ -324,7 +371,7 @@ function installRules(rules, agentIds, scope, { dryRun = false } = {}) {
       written.push(rel(t.file));
     }
   }
-  return { written, skipped, manual };
+  return { written, skipped, notes };
 }
 
 /**
@@ -389,8 +436,9 @@ Options:
   --skills <names|all>      Skills to install (comma-separated; see --list)
   --agents <ids|all>        Agents: ${AGENT_IDS.join(", ")}
   --scope <project|global>  Install scope for rules AND skills (default: project).
-                            Global writes user-level files (e.g. ~/.claude/CLAUDE.md);
-                            agents without a scriptable global home print manual steps.
+                            Global writes user-level files for every agent
+                            (e.g. ~/.claude/CLAUDE.md, ~/.cursor/rules,
+                            VS Code User/prompts) — no manual steps.
   --skills-scope <project|global>  Override the skill scope separately
   --dry-run                 Show what would be written without writing anything
   -y, --yes                 Skip the confirmation prompt
@@ -583,7 +631,7 @@ async function main() {
   if (selectedRules.length) {
     const s = p.spinner();
     s.start(args.dryRun ? "Resolving rule targets" : "Installing rules");
-    const { written, skipped, manual } = installRules(selectedRules, agents, scope, {
+    const { written, skipped, notes } = installRules(selectedRules, agents, scope, {
       dryRun: args.dryRun,
     });
     s.stop(
@@ -592,7 +640,7 @@ async function main() {
         : `Rules installed (${written.length} file${written.length === 1 ? "" : "s"})`,
     );
     if (written.length) p.note(written.join("\n"), args.dryRun ? "Would write" : "Wrote");
-    if (manual.length) p.note(manual.join("\n\n"), "Manual steps (not scriptable)");
+    if (notes.length) p.note(notes.join("\n\n"), "Heads-up");
     if (skipped.length) p.note(skipped.join("\n"), "Skipped");
     if (selectedRules.some((r) => r.name === "mental")) {
       if (args.dryRun) {
@@ -632,6 +680,8 @@ async function main() {
 export {
   renderRulesBlock,
   renderRuleMd,
+  renderRuleInstructionsMd,
+  vscodeUserDir,
   mergeManaged,
   ruleTarget,
   describeTarget,

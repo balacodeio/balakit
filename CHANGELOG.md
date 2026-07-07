@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.6.0]
+
+### Features
+- **Fully automated global installs for all 8 agents — zero manual steps.** The four previously-manual global targets now write real files: Cursor → `~/.cursor/rules/*.mdc` (with a printed heads-up about Cursor's workspace-less agent-session bug; Settings → Rules mirroring is optional), GitHub Copilot → VS Code profile `User/prompts/balakit-*.instructions.md` with `applyTo` frontmatter (detects Code / Code - Insiders / VSCodium), Kilo Code → `~/.kilocode/rules/` (the still-supported global rules dir), and omp → `~/.omp/agent/AGENTS.md` (its config home, mirroring pi's `~/.pi/agent/` convention). All researched against current platform docs/forums.
+
+### Changes
+- The `manual` target kind and its "Manual steps" panel are gone; targets can instead carry a `note` surfaced in a "Heads-up" panel after install (used for the Cursor caveat).
+
 ## [v1.5.2]
 
 ### Fixes

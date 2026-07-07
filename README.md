@@ -68,22 +68,26 @@ at either scope:
 
 | Agent | Project rules | Global (user-level) rules |
 | --- | --- | --- |
-| Cursor | `.cursor/rules/*.mdc` (verbatim — native `globs`/`alwaysApply`) | ⚠️ manual — Settings → Rules → User Rules (instructions printed) |
+| Cursor | `.cursor/rules/*.mdc` (verbatim — native `globs`/`alwaysApply`) | `~/.cursor/rules/*.mdc` † |
 | Claude Code | `CLAUDE.md` (managed block, merged) | `~/.claude/CLAUDE.md` (managed block) |
 | Codex | `AGENTS.md` (managed block, merged) | `~/.codex/AGENTS.md` (managed block) |
 | OpenCode | `AGENTS.md` (shared) | `~/.config/opencode/AGENTS.md` (managed block) |
-| GitHub Copilot | `AGENTS.md` (shared — Copilot reads it natively) | ⚠️ manual (instructions printed) |
+| GitHub Copilot | `AGENTS.md` (shared — Copilot reads it natively) | VS Code profile `User/prompts/balakit-*.instructions.md` (`applyTo` scoped) |
 | Cline | `.clinerules/balakit-*.md` (one file per rule) | `~/Documents/Cline/Rules/balakit-*.md` |
-| Kilo Code | `.kilocode/rules/balakit-*.md` | ⚠️ manual — `~/.config/kilo/kilo.jsonc` (instructions printed) |
-| omp | `AGENTS.md` (shared — AGENTS.md-compatible) | ⚠️ manual (global home unverified) |
+| Kilo Code | `.kilocode/rules/balakit-*.md` | `~/.kilocode/rules/balakit-*.md` (auto-included alongside `kilo.jsonc`) |
+| omp | `AGENTS.md` (shared — AGENTS.md-compatible) | `~/.omp/agent/AGENTS.md` (pi-fork convention) |
 
+† Cursor caveat: `~/.cursor/rules` applies reliably when a project/workspace is
+open; a forum-tracked Cursor bug can skip it in workspace-less Agent sessions.
+The installer prints this heads-up; mirroring the rule in Cursor Settings →
+Rules is optional belt-and-braces.
+
+- **Fully automated at both scopes** — every agent has a real file destination;
+  no manual steps. Platform caveats are printed as heads-ups, not homework.
 - **Idempotent** — re-running replaces the managed block between markers / the
   installed rule files; it never duplicates or clobbers your own content.
 - **Self-contained** — glob-scoped rules carry their scope note inline, so merged
   files never point at files you don't have.
-- **Graceful degradation** — agents whose global rules live behind a UI or a
-  config file the installer won't rewrite get exact manual instructions printed
-  instead of an error.
 - **Scope is a real choice** — project rules describe how to work in *this*
   repo and belong under version control; global rules are personal, apply to
   every repo on the machine, and live in your user config. Pick deliberately —
