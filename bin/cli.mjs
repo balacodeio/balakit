@@ -374,33 +374,105 @@ function installRules(rules, agentIds, scope, { dryRun = false } = {}) {
   return { written, skipped, notes };
 }
 
+// --- Global git-excludes guarantee for .mental/ ---------------------------
+//
+// The mental rule promises the installer keeps `.mental/` out of git via the
+// MACHINE-WIDE excludes (never a repo .gitignore). If that promise isn't kept,
+// a private second-brain can be `git add -A`'d and pushed — a data leak. These
+// helpers make the guarantee real, idempotent, and cross-platform, and let
+// `--doctor` verify it. `home` is injectable so tests run in a sandbox.
+
+const MENTAL_IGNORE_LINE = ".mental/";
+const MENTAL_IGNORE_COMMENT = "# balakit: private second-brain (mental skill) — never commit";
+
+/** Run a git command, inheriting env (honors GIT_CONFIG_GLOBAL in tests). */
+function runGit(...args) {
+  return spawnSync("git", args, { encoding: "utf8" });
+}
+
+/** True when git is on PATH and runnable. */
+function gitAvailable() {
+  const r = runGit("--version");
+  return !r.error && r.status === 0;
+}
+
+/** Expand a leading `~` in a git-config path value to the home dir. */
+function expandHome(p, home) {
+  if (p === "~") return home;
+  if (p.startsWith("~/") || p.startsWith("~\\")) return join(home, p.slice(2));
+  return p;
+}
+
 /**
- * Ensure `.mental/` is ignored machine-wide via git's global excludes file.
- * Wires `core.excludesFile` to ~/.gitignore when unset; appends the pattern
- * idempotently; never clobbers existing content. Returns a report line or null
- * when git is unavailable.
+ * Git's default global excludes file when `core.excludesfile` is unset:
+ * `$XDG_CONFIG_HOME/git/ignore`, else `<home>/.config/git/ignore`. Git reads
+ * this path even with no config, which is why we prefer it over `~/.gitignore`.
  */
-function ensureMentalExcluded() {
-  const git = (...args) => spawnSync("git", args, { encoding: "utf8" });
-  const probe = git("--version");
-  if (probe.error || probe.status !== 0) return null;
-  let file = (git("config", "--global", "core.excludesFile").stdout || "").trim();
-  if (!file) {
-    file = join(homedir(), ".gitignore");
-    git("config", "--global", "core.excludesFile", file);
-  } else if (file === "~" || file.startsWith("~/") || file.startsWith("~\\")) {
-    file = join(homedir(), file.slice(2));
-  }
+function defaultExcludesFile(home) {
+  const xdg = process.env.XDG_CONFIG_HOME;
+  const base = xdg && xdg.trim() ? xdg : join(home, ".config");
+  return join(base, "git", "ignore");
+}
+
+/**
+ * Resolve the active global excludes file to an absolute path.
+ * Honors an existing `core.excludesfile` (never overwrites the user's choice);
+ * when unset and `create` is true, wires it to the XDG default and returns that.
+ * Returns null if git is unavailable, or { file, created }.
+ */
+function resolveGlobalExcludesFile({ create = false, home = homedir() } = {}) {
+  if (!gitAvailable()) return null;
+  const configured = (runGit("config", "--global", "--get", "core.excludesfile").stdout || "").trim();
+  if (configured) return { file: expandHome(configured, home), created: false };
+  if (!create) return { file: null, created: false };
+  const file = defaultExcludesFile(home);
+  // Store as a forward-slash path so a Windows gitconfig doesn't treat
+  // backslashes as escapes.
+  runGit("config", "--global", "core.excludesfile", file.split("\\").join("/"));
+  return { file, created: true };
+}
+
+/**
+ * Idempotently guarantee `.mental/` is in the machine-wide git excludes.
+ * Creates/wires the excludes file if needed; appends the pattern (with a
+ * comment) only when absent; never rewrites or reorders existing lines.
+ * Returns a result object for reporting and the doctor self-check.
+ */
+function ensureMentalExcluded({ home = homedir() } = {}) {
+  const resolved = resolveGlobalExcludesFile({ create: true, home });
+  if (!resolved) return { ok: false, reason: "git-unavailable" };
+  const { file, created } = resolved;
   let cur = "";
   try {
     cur = readFileSync(file, "utf8");
   } catch {}
-  if (cur.split(/\r?\n/).some((l) => l.trim() === ".mental/")) {
-    return `.mental/ already ignored via ${file}`;
+  const present = cur.split(/\r?\n/).some((l) => l.trim() === MENTAL_IGNORE_LINE);
+  if (!present) {
+    mkdirSync(dirname(file), { recursive: true });
+    const gap = cur && !cur.endsWith("\n") ? "\n" : "";
+    writeFileSync(file, `${cur}${gap}${MENTAL_IGNORE_COMMENT}\n${MENTAL_IGNORE_LINE}\n`);
   }
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, (cur && !cur.endsWith("\n") ? cur + "\n" : cur) + ".mental/\n");
-  return `added .mental/ to global git excludes (${file})`;
+  return { ok: true, file, created, appended: !present };
+}
+
+/**
+ * Read-only check that the `.mental/` global exclude is in force.
+ * Returns { ok, file, hasLine, configured, liveIgnored } — `liveIgnored` is
+ * git's own verdict via `check-ignore` when run inside a repo (null otherwise).
+ */
+function checkMentalExcluded({ home = homedir() } = {}) {
+  if (!gitAvailable()) return { ok: false, reason: "git-unavailable" };
+  const configured = (runGit("config", "--global", "--get", "core.excludesfile").stdout || "").trim();
+  const file = configured ? expandHome(configured, home) : defaultExcludesFile(home);
+  let cur = "";
+  try {
+    cur = readFileSync(file, "utf8");
+  } catch {}
+  const hasLine = cur.split(/\r?\n/).some((l) => l.trim() === MENTAL_IGNORE_LINE);
+  // `git check-ignore` only means anything inside a repo; 128 = not a repo.
+  const ci = runGit("check-ignore", "-q", ".mental/probe");
+  const liveIgnored = ci.status === 128 ? null : ci.status === 0;
+  return { ok: hasLine && liveIgnored !== false, file, hasLine, configured: !!configured, liveIgnored };
 }
 
 /** Expand rule names to the skills they bundle (RULE_BUNDLED_SKILLS). */
@@ -425,6 +497,30 @@ function skillsCommand(skillNames, agentIds, scope) {
     .join(" ");
 }
 
+/**
+ * `--doctor`: verify the `.mental/` global git-exclude, repairing it if missing.
+ * Prints a PASS/FAIL report; returns a process exit code (0 = secured).
+ */
+function runDoctor() {
+  if (!gitAvailable()) {
+    console.error("✖ git is not on PATH — cannot verify or set the .mental/ global exclude.");
+    return 1;
+  }
+  // Idempotent converge: sets core.excludesfile when unset and adds the pattern
+  // when absent; a no-op when already correct.
+  ensureMentalExcluded();
+  const check = checkMentalExcluded();
+  const mark = (b) => (b ? "✓" : "✖");
+  console.log(`${mark(check.configured)} core.excludesfile ${check.configured ? "is set" : "is UNSET (using git's XDG default path)"}`);
+  console.log(`${mark(check.hasLine)} ${check.file} ${check.hasLine ? "contains" : "is MISSING"} a \`.mental/\` line`);
+  if (check.liveIgnored === true) console.log("✓ git check-ignore confirms .mental/ is ignored in this repo");
+  else if (check.liveIgnored === false) console.log("✖ git check-ignore says .mental/ is NOT ignored here");
+  else console.log("· run inside a git repo to live-verify with check-ignore");
+  const ok = check.hasLine && check.liveIgnored !== false;
+  console.log(ok ? "\n✓ .mental/ is protected from git." : "\n✖ .mental/ is NOT protected — see above.");
+  return ok ? 0 : 1;
+}
+
 const USAGE = `${CMD} v${pkg.version} — opinionated rules & skills installer
 
 Usage: npx ${CMD} [options]
@@ -442,6 +538,7 @@ Options:
   --skills-scope <project|global>  Override the skill scope separately
   --dry-run                 Show what would be written without writing anything
   -y, --yes                 Skip the confirmation prompt
+  --doctor                  Check (and repair) the .mental/ global git-exclude, then exit
   --list                    List available rules, skills, and agents
   -v, --version             Print version
   -h, --help                Show this help
@@ -474,6 +571,8 @@ function parseArgs(argv) {
       console.log(`\nSkills:\n${allSkills.map((s) => `  ${s.name} — ${trunc(s.description, 100)}`).join("\n")}`);
       console.log(`\nAgents:\n${AGENTS.map((a) => `  ${a.id} — ${a.label}`).join("\n")}`);
       process.exit(0);
+    } else if (a === "--doctor") {
+      process.exit(runDoctor());
     } else if (a === "--rules") args.rules = next();
     else if (a === "--skills") args.skills = next();
     else if (a === "--agents") args.agents = next();
@@ -644,10 +743,20 @@ async function main() {
     if (skipped.length) p.note(skipped.join("\n"), "Skipped");
     if (selectedRules.some((r) => r.name === "mental")) {
       if (args.dryRun) {
-        p.log.step("Would ensure .mental/ is in the global git excludes (core.excludesFile).");
+        p.log.step("Would ensure .mental/ is in the global git excludes (core.excludesfile).");
       } else {
-        const report = ensureMentalExcluded();
-        p.log.step(report ?? "git not found — add `.mental/` to your global git excludes manually.");
+        const r = ensureMentalExcluded();
+        if (!r.ok) {
+          p.log.warn(
+            "git not found — .mental/ is NOT yet git-ignored. Once git is installed, run `npx balakit --doctor` to secure it.",
+          );
+        } else {
+          const verify = checkMentalExcluded();
+          const live = verify.liveIgnored === true ? " (verified: git ignores .mental/ here)" : "";
+          p.log.step(
+            `${r.appended ? "Secured" : "Confirmed"} .mental/ in your global git excludes → ${r.file}${r.created ? " (core.excludesfile wired)" : ""}${live}`,
+          );
+        }
       }
     }
   }
@@ -687,6 +796,11 @@ export {
   describeTarget,
   installRules,
   ensureMentalExcluded,
+  checkMentalExcluded,
+  resolveGlobalExcludesFile,
+  defaultExcludesFile,
+  expandHome,
+  runDoctor,
   bundledSkillsFor,
   skillsCommand,
   skillDescription,

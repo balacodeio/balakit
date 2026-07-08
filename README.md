@@ -133,11 +133,21 @@ journals after, and records decisions — deriving "where are we" from git + the
 journal + open decisions rather than maintaining rot-prone to-do lists. Each
 repo gets its own `.mental/`; there is no global bundle.
 
-Installing the `mental` rule also idempotently adds `.mental/` to your **global
-git excludes** (`core.excludesFile`), so the folder is ignored in every repo on
-the machine without touching any project's `.gitignore`. Install the rule
-globally (`--scope global`) plus the `mental` skill globally (`-g`) to enable
-the layer across everything you work on.
+Installing the `mental` rule also idempotently guarantees `.mental/` is in your
+**global git excludes**, so a private second-brain can never be `git add`-ed and
+pushed — the folder is ignored in every repo on the machine without touching any
+project's `.gitignore`. If `core.excludesfile` is unset, the installer wires it
+to git's XDG default (`~/.config/git/ignore`) and adds the `.mental/` line; if it
+is already set, that file is used and never overwritten. Install the rule
+globally (`--scope global`) plus the `mental` skill globally (`-g`) to enable the
+layer across everything you work on.
+
+Verify (or repair) the exclude at any time — it also runs automatically on every
+install:
+
+```bash
+npx balakit --doctor
+```
 
 ## Skills
 

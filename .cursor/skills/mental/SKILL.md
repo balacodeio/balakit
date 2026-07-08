@@ -191,9 +191,16 @@ Mention in one line that you created `.mental/` so the user knows it exists.
   shared/global bundle. It is absent in CI and on other machines, so never treat
   it as a precondition or block work on it — create it when missing, use it when
   present.
-- **Never touch `.gitignore`** — `.mental/` is ignored machine-wide via the
-  user's global git excludes (set up by the balakit installer). Don't check,
-  create, or edit ignore files for it.
+- **Keep it out of git via the GLOBAL excludes, never a repo `.gitignore`.**
+  `.mental/` is ignored machine-wide via the user's global git excludes (the
+  balakit installer sets this up). **Before you create `.mental/`, confirm the
+  guard is real:** run `git check-ignore -q .mental` — if it does *not* report
+  ignored, secure it yourself by adding `.mental/` to the global excludes file
+  (the path from `git config --global --get core.excludesfile`, or create
+  `~/.config/git/ignore` and point `core.excludesfile` at it when unset), then
+  proceed. Never add `.mental/` to the repo's own `.gitignore` (that commits the
+  fact of it) and never leave the folder unignored — an unignored `.mental/` can
+  be `git add`-ed and pushed, leaking a private second-brain.
 - **Never leak** — `.mental/` content stays out of commits, PRs, code comments,
   and anything leaving the machine.
 - **Scope split** — repo-specific knowledge only. Cross-repo personal facts

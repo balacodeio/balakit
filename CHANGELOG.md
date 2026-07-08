@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.7.1]
+
+### Fixes
+- **Data-leak guard: the `.mental/` global git-exclude is now actually created.** The `mental` rule promises `.mental/` is ignored machine-wide (so agents never touch a repo `.gitignore`), but on a fresh machine the installer left `core.excludesfile` unset and no ignore file — so `.mental/` was fully visible to git and a private second-brain could be `git add -A`'d and pushed. The installer now idempotently guarantees the exclude: when `core.excludesfile` is unset it wires it to git's XDG default (`~/.config/git/ignore`, OS-appropriate home, forward-slash form on Windows) and creates the file; when already set it uses that file and never overwrites it; the `.mental/` line (with a comment) is appended only if absent. Exact-line, no-duplicate, no-reorder idempotency. Previously it defaulted to `~/.gitignore` and wasn't verified.
+
+### Features
+- **`npx balakit --doctor`** — verifies the `.mental/` global exclude is in force (config set, ignore file contains the line, and — inside a repo — `git check-ignore` confirms it live), repairing it idempotently and printing a PASS/FAIL report. Runs automatically after every `mental` install so the regression is caught early.
+
+### Changes
+- The `mental` skill now instructs the agent to confirm `.mental/` is git-ignored (via `git check-ignore`) before creating it, and to secure it through the **global excludes** — never a repo `.gitignore` — if the installer's guard is somehow absent (e.g. a skills-only install). Belt-and-suspenders against the leak at folder-creation time.
+- Added a test suite (`node --test`) covering the unset-excludesfile case, idempotent re-runs, respect-existing-config, no-trailing-newline append, and the doctor check.
+
 ## [v1.7.0]
 
 ### Fixes
