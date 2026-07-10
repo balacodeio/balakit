@@ -1,28 +1,24 @@
 # `.mental/` file templates
 
-Copy-paste skeletons for every concept type. Substitute `<...>` placeholders.
-Frontmatter: `type` is required (OKF); everything else strongly recommended.
-`timestamp` = last updated, ISO-8601. Links are standard markdown, rooted at the
-bundle (`/decisions/...`), because **path = identity**.
+Minimal templates for project continuity. Substitute `<...>` placeholders.
+`type` is required; `timestamp` is the last-updated time in ISO-8601. Use links
+relative to the file containing them.
 
-## Bundle skeleton (bootstrap, default level)
+## Bundle skeleton
 
-```
+```text
 .mental/
 ├── index.md
 ├── status/current.md
 ├── decisions/
 ├── journal/
-├── notes/
-├── areas/
-├── plans/
-├── docs/internal/
-├── docs/external/
-└── temp/
+└── notes/
 ```
 
 Create `index.md` and `status/current.md` from the templates below; leave the
-other directories empty — concepts are added as work happens.
+other directories empty until meaningful concepts exist. Existing optional
+directories from earlier versions remain valid user data; never delete them
+automatically.
 
 ## `index.md` (bundle entry point)
 
@@ -38,18 +34,16 @@ status: active
 
 # <Project> — mental index
 
-Private second-brain for <repo>. Start at [current status](/status/current.md).
+Private continuity log for <repo>. Start at
+[current status](status/current.md).
 
-- [Status](/status/current.md) — where things stand (derived snapshot)
-- [Journal](/journal/) — day-by-day log; latest entry ends with the Resume line
-- [Decisions](/decisions/) — what was decided/deferred, and why
-- [Notes](/notes/) — durable repo knowledge
-- [Areas](/areas/) — domain digests
-- [Plans](/plans/) — authored plans
-- [Docs](/docs/) — internal (authored) / external (ingested)
+- [Status](status/current.md) — disposable snapshot derived from live evidence
+- [Journal](journal/) — concise outcomes and exact handoffs
+- [Decisions](decisions/) — consequential choices and rationale
+- [Notes](notes/) — durable facts that prevent repeat investigation
 ```
 
-## `status/current.md` (derived snapshot — a cache, never hand-groomed)
+## `status/current.md`
 
 ```markdown
 ---
@@ -65,17 +59,17 @@ status: active
 _Derived <date> from journal tail + git + open decisions. Stale? Re-derive._
 
 ## Now
-<current focus, one or two sentences>
+<current focus, one or two factual sentences>
 
 ## In flight
-<branches / PRs / uncommitted work observed in git>
+<branch, PR, and uncommitted work observed in git; write "None" when clean>
 
 ## Open decisions
-- [<title>](/decisions/<file>.md) — open
-- [<title>](/decisions/<file>.md) — deferred: <why>
+- [<title>](../decisions/<file>.md) — open
+- [<title>](../decisions/<file>.md) — deferred: <what it awaits>
 
 ## ▶ Resume point
-<copied from the latest journal entry's Resume line>
+<one exact next action copied from the latest journal Resume line>
 ```
 
 ## `journal/<YYYY-MM-DD>.md`
@@ -92,15 +86,15 @@ status: active
 
 # <YYYY-MM-DD>
 
-## <HH:MM> — <topic>
-<what happened, what was accomplished, decisions made, user's stated intent /
-headspace when voiced — human-legible narrative for future-them>
+## <HH:MM> — <outcome>
+<what changed, evidence of completion, consequential decisions, and only context
+git cannot explain>
 
-Resume: <next action> — open loops: <thread>, <thread>
+Resume: <one exact next action> — open loops: <none or concise list>
 ```
 
-Multiple sessions the same day append additional `## <HH:MM> — <topic>` sections.
-**The last line of every session section is the `Resume:` line.**
+Append one section per coherent substantive task. The last line of every section
+must be its `Resume:` line.
 
 ## `decisions/<YYYY-MM-DD>-<slug>.md`
 
@@ -118,15 +112,15 @@ resource: <optional link to PR/code/discussion>
 # <Decision title>
 
 ## Context
-<why this decision surfaced>
+<why this choice matters and what constraint forced it>
 
 ## Options
 - <option A> — <tradeoff>
 - <option B> — <tradeoff>
 
 ## Outcome
-<empty while open/deferred. When decided: what was chosen + WHY + when.
-If deferred: what it's waiting on.>
+<For open: what input is needed. For deferred: what it awaits. For decided:
+what was chosen, why, and when. For superseded: link the replacement.>
 ```
 
 ## `notes/<slug>.md`
@@ -144,66 +138,6 @@ resource: <optional link to the code this describes>
 
 # <Fact title>
 
-<the durable, non-obvious, repo-specific fact — how this repo ACTUALLY behaves.
-Link related concepts: [related note](/notes/<slug>.md)>
-```
-
-## `areas/<domain>.md`
-
-```markdown
----
-type: Area
-title: <Domain> — digest
-description: Map-of-content digest for <domain>.
-tags: [<domain>]
-timestamp: <ISO-8601>
-status: active
----
-
-# <Domain>
-
-## Current state
-<narrative digest>
-
-## Key decisions
-- [<title>](/decisions/<file>.md)
-
-## Canonical notes
-- [<title>](/notes/<slug>.md)
-```
-
-## `plans/<slug>.md`
-
-```markdown
----
-type: Plan
-title: <Plan title>
-description: <one-line summary>
-tags: [<topic>]
-timestamp: <ISO-8601>
-status: draft       # draft → active → superseded
----
-
-# <Plan title>
-
-<the plan, in whatever shape the user thinks in>
-```
-
-## `docs/{internal,external}/<slug>.md` (Document concept wrapping an asset)
-
-```markdown
----
-type: Document
-title: <Document title>
-description: <one-line summary of what it is and why it matters>
-tags: [<topic>]
-timestamp: <ISO-8601>
-status: active
-resource: <source URL (external) or relative path to the asset file (internal)>
----
-
-# <Document title>
-
-<short summary of the document's content + what the user should take from it.
-The raw asset (PDF/HTML/etc.) sits alongside this concept file.>
+<The durable, non-obvious, repository-specific fact and the evidence supporting
+it. Link related concepts with paths relative to this file.>
 ```

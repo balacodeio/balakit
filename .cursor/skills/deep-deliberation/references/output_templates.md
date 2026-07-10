@@ -1,66 +1,151 @@
 # Output templates
 
-The three required output templates for `deep-deliberation`. Stage 1 is filled
-inline by the orchestrator; Stage 2 and Final templates are filled after the
-subagent panel returns findings. Each template's headers are non-negotiable —
-see the *NON-NEGOTIABLE* section of the skill.
+Use these structures exactly. Fill every section; write `None` when a section
+has no content. Do not replace them with an unstructured narrative.
 
-## Stage 1 — Tree of Thought
+## Stage 1 — Frame and shortlist
 
 ```markdown
-## Problem
-[restatement + assumptions]
+DELIBERATION_STATE
+stage: 1
+checkpoint: 1
+shortlist: A,B
+delegate_results: 0/0
+next_action: Wait for the user's Checkpoint 1 decision.
 
-## Branches
+## Decision
+[Decision, desired outcome, decision horizon, and cost of delay.]
+
+## Constraints and non-goals
+- Must: [...]
+- Important: [...]
+- Preference: [...]
+- Non-goals: [...]
+
+## Assumptions and evidence gaps
+- Assumption: [...] — evidence: [source or unverified]
+
+## Reversibility
+[One-way or two-way door, rollback cost, and cost of being wrong.]
+
+## Options
 ### Branch A — [name]
-- Idea: ...
-- Pros / Cons / Risk: ...
-- Effort: S/M/L
-[... B, C, ...]
+- Mechanism: [...]
+- Expected benefit: [...]
+- Main downside: [...]
+- Critical assumptions: [...]
+- Supporting evidence: [...]
+- Reversibility: [...]
+- Rough effort: S | M | L
+- Failure condition: [...]
+
+[Repeat for Branches B–E as needed.]
 
 ## Evaluation
-[scoring + what was pruned and why]
+- Branch A: [pass | partial | fail | unknown by criterion]
+- Branch B: [pass | partial | fail | unknown by criterion]
+- Pruned: [branch and explicit reason, or None]
 
-## Recommendation
-Primary: [branch] — [why]
-Runner-up: [branch]
-Orchestrator pushback: [self-challenge]
+## Shortlist
+- Option A: [original branch] — [why it advances as the leading option]
+- Option B: [original branch] — [why it advances as the strongest challenger]
+- Evidence most likely to change this shortlist: [...]
+
+## Checkpoint 1
+[Ask the user to approve, revise, restart, or end the pipeline.]
 ```
 
-## Stage 2 — Expert red-team
+## Stage 2 — Evidence tournament
 
 ```markdown
-## Expert panel
-[5 personas, one line each]
+DELIBERATION_STATE
+stage: 2
+checkpoint: 2
+shortlist: A,B
+delegate_results: [returned]/[launched]
+next_action: Wait for the user's Checkpoint 2 decision.
 
-## Findings
-- 🔴 Fatal: ...
-- 🟡 Fixable: ...
-- ⚪ Minor / disagreement: ...
+## Review missions
+- [Mission]: [returned | failed | unavailable]
 
-## Expert verdicts
-[GO / GO-WITH-CHANGES / NO-GO per persona]
+## Evidence-backed blockers
+- [Claim] — [source] — affects [A | B | both]
 
-## Orchestrator synthesis
-[clustered view + own pushback]
+## Fixable risks
+- [Claim] — [source] — mitigation: [...]
+
+## Minor concerns
+- [Claim] — [source]
+
+## Unverified claims
+- [Claim] — missing evidence: [...]
+
+## Material disagreements
+- [Conflict] — [why it remains unresolved]
+
+## Challenger case
+[Strongest evidence favoring the current runner-up.]
+
+## Synthesis
+- Option A survives because: [...]
+- Option B survives because: [...]
+- Decision-changing unknowns: [...]
+- Return to Stage 1 required: yes | no
+
+## Checkpoint 2
+[Ask the user to proceed, revise, reopen Stage 1, or end the pipeline.]
 ```
 
 ## Final recommendation
 
 ```markdown
-## Recommendation
-[the call + why]
+DELIBERATION_STATE
+stage: 3
+checkpoint: 3
+shortlist: A,B
+delegate_results: [returned]/[launched]
+next_action: Wait for the user's Checkpoint 3 decision.
 
-## Rationale
-[how Stage 1–3 led here]
+## Recommendation
+[Chosen option, confidence, and concise rationale.]
+
+## Criteria comparison
+- Must: [...]
+- Important: [...]
+- Preference: [...]
+
+## Determining evidence
+- [Evidence] — [source] — [implication]
+
+## Assumptions and uncertainty
+- Verified: [...]
+- Unverified: [...]
+- Residual uncertainty: [...]
+
+## Material disagreements
+- [Disagreement and why the recommendation proceeds despite it, or None]
+
+## Reversibility and rollback
+[Rollback path, switching cost, and point of no return.]
+
+## Premortem
+- Failure mode: [...] — mitigation: [...] — early warning: [...]
+
+## Conditions that change the recommendation
+- Switch or reopen the decision if: [...]
 
 ## Ranked alternatives
-1. [alt] — when to prefer it
-2. [alt] — when to prefer it
+1. [Alternative] — prefer when [...]
+2. [Alternative] — prefer when [...]
 
-## Risks & mitigations
-- [risk] → [mitigation]
+## Cheapest de-risking action
+[Smallest experiment, prototype, or evidence-gathering action that could reduce
+the most important uncertainty.]
 
-## Next step (Mode-Specific Action)
-[one concrete action depending on active mode (e.g. draft finalized plan document for Plan Mode, or prepare for implementation for Agent Mode)]
+## Next step
+[One action appropriate to the session's current capabilities. Do not execute it.]
+
+## Checkpoint 3
+[Ask the user to approve, revise, choose an alternative, or request a separate
+planning/implementation action.]
 ```

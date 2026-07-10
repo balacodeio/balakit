@@ -117,25 +117,42 @@ OUTPUT_PATH_PATTERNS = [
     "image_url",
     "video.url",
     "video_url",
-    "image",
-    "video",
 ]
 
 
-def resolve_output_url(result: dict) -> str:
+def resolve_output_urls(result: dict) -> list[str]:
+    """Return one or more HTTP URLs from a Fal result."""
+    urls: list[str] = []
+
+    images = result.get("images")
+    if isinstance(images, list):
+        for item in images:
+            if isinstance(item, dict):
+                url = item.get("url")
+                if isinstance(url, str) and url.startswith("http"):
+                    urls.append(url)
+            elif isinstance(item, str) and item.startswith("http"):
+                urls.append(item)
+
+    if urls:
+        return urls
+
     for pattern in OUTPUT_PATH_PATTERNS:
         try:
-            return deep_get(result, pattern)
+            value = deep_get(result, pattern)
         except (KeyError, IndexError, TypeError):
             continue
-    # Last resort: scan the top-level keys for anything URL-like
-    for key, val in result.items():
+        if isinstance(value, str) and value.startswith("http"):
+            return [value]
+
+    for val in result.values():
         if isinstance(val, str) and val.startswith("http"):
-            return val
+            return [val]
         if isinstance(val, dict):
-            for k2, v2 in val.items():
-                if isinstance(v2, str) and v2.startswith("http"):
-                    return v2
+            for nested in val.values():
+                if isinstance(nested, str) and nested.startswith("http"):
+                    return [nested]
+
     raise ValueError(
         f"Could not resolve output URL from Fal result. "
         f"Raw: {json.dumps(result, default=str)[:1000]}"
@@ -160,6 +177,8 @@ def cmd_image(args) -> None:
         call_args["num_images"] = args.num_images
     if args.negative_prompt:
         call_args["negative_prompt"] = args.negative_prompt
+    if args.strength is not None:
+        call_args["strength"] = args.strength
 
     # Upload reference image if provided
     if args.input_image:
@@ -172,31 +191,39 @@ def cmd_image(args) -> None:
         call_args["image_url"] = fal_client.upload_file(str(ip))
 
     folder = get_or_make_folder(output_dir, args.title)
-    idx = next_index(folder, "image", "png")
-    filename = f"image-{idx:02d}.png"
-    out_path = folder / filename
 
     sys.stderr.write(f"[media-gen] Generating image via {endpoint}...\n")
     sys.stderr.flush()
 
     result = fal_client.subscribe(endpoint, arguments=call_args, with_logs=False)
-    url = resolve_output_url(result)
-    download(url, out_path)
+    urls = resolve_output_urls(result)
 
-    write_prompt_md(folder, {
-        "kind": "image",
-        "endpoint": endpoint,
-        "filename": filename,
-        "prompt": args.prompt,
-        "working_title": args.title,
-        "args": {k: v for k, v in call_args.items() if k != "prompt"},
-    })
+    saved_paths: list[str] = []
+    fal_urls: list[str] = []
+    for url in urls:
+        idx = next_index(folder, "image", "png")
+        filename = f"image-{idx:02d}.png"
+        out_path = folder / filename
+        download(url, out_path)
+        saved_paths.append(str(out_path))
+        fal_urls.append(url)
+
+        write_prompt_md(folder, {
+            "kind": "image",
+            "endpoint": endpoint,
+            "filename": filename,
+            "prompt": args.prompt,
+            "working_title": args.title,
+            "args": {k: v for k, v in call_args.items() if k != "prompt"},
+        })
 
     print(json.dumps({
-        "image_path": str(out_path),
+        "image_path": saved_paths[0],
+        "image_paths": saved_paths,
         "folder": str(folder),
         "endpoint": endpoint,
-        "fal_url": url,
+        "fal_url": fal_urls[0],
+        "fal_urls": fal_urls,
     }))
 
 
@@ -233,7 +260,7 @@ def cmd_video(args) -> None:
     sys.stderr.flush()
 
     result = fal_client.subscribe(endpoint, arguments=call_args, with_logs=False)
-    url = resolve_output_url(result)
+    url = resolve_output_urls(result)[0]
     download(url, out_path)
 
     write_prompt_md(folder, {
@@ -286,12 +313,33 @@ def _transcode_fps(src: Path, target_fps: int, work_dir: Path) -> Path:
     dst = work_dir / f"_fps{target_fps}-{src.stem}.mp4"
     sys.stderr.write(f"[media-gen] Pre-converting to {target_fps}fps...\n")
     sys.stderr.flush()
-    subprocess.run(
-        ["ffmpeg", "-y", "-i", str(src), "-r", str(target_fps),
-         "-c:v", "libx264", "-preset", "medium", "-crf", "18",
-         "-pix_fmt", "yuv420p", "-c:a", "copy", str(dst)],
-        capture_output=True, check=True,
-    )
+    cmd = [
+        "ffmpeg", "-y", "-i", str(src), "-r", str(target_fps),
+        "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+        "-pix_fmt", "yuv420p",
+    ]
+    if shutil.which("ffprobe"):
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a:0",
+             "-show_entries", "stream=index", "-of", "csv=p=0", str(src)],
+            capture_output=True, text=True,
+        )
+        if probe.returncode == 0 and probe.stdout.strip():
+            cmd.extend(["-c:a", "copy"])
+        else:
+            cmd.append("-an")
+    else:
+        cmd.append("-an")
+    cmd.append(str(dst))
+    try:
+        subprocess.run(cmd, capture_output=True, check=True)
+    except subprocess.CalledProcessError as exc:
+        sys.stderr.write(
+            "[media-gen] ffmpeg transcode failed; continuing with original file.\n"
+        )
+        if exc.stderr:
+            sys.stderr.write(exc.stderr.decode("utf-8", errors="replace")[:500] + "\n")
+        return src
     return dst
 
 
@@ -316,6 +364,13 @@ def cmd_upscale(args) -> None:
         factor = float(args.factor)
     elif probe.get("height"):
         factor = round(args.target_height / probe["height"], 4)
+        if factor < 1.0:
+            sys.stderr.write(
+                "ERROR: --target-height is below the source height. "
+                "Topaz upscale cannot downscale; pass an explicit --factor below 1.0 "
+                "only if the endpoint supports it.\n"
+            )
+            sys.exit(6)
     else:
         sys.stderr.write(
             "ERROR: couldn't read source height and no --factor given.\n"
@@ -351,7 +406,7 @@ def cmd_upscale(args) -> None:
         call_args["image_url"] = src_url
 
     result = fal_client.subscribe(endpoint, arguments=call_args, with_logs=False)
-    url = resolve_output_url(result)
+    url = resolve_output_urls(result)[0]
 
     out_ext = "mp4" if is_video else "png"
     idx = next_index(folder, "upscaled", out_ext)
@@ -399,6 +454,8 @@ def build_parser() -> argparse.ArgumentParser:
     pi.add_argument("--size", default=None, help="e.g. '1024x1024'")
     pi.add_argument("--num-images", dest="num_images", type=int, default=1)
     pi.add_argument("--negative-prompt", dest="negative_prompt", default=None)
+    pi.add_argument("--strength", type=float, default=None,
+                    help="Image-to-image strength when supported by the endpoint")
     pi.add_argument("--input-image", dest="input_image", action="append", default=None)
     pi.set_defaults(func=cmd_image)
 

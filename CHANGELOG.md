@@ -7,19 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-#### Major Update: `media-gen` v3.0 — Dual-Model High-Conversion Image Generation
-- **Dual-model generation** — Always runs Nano Banana Pro Edit + Ideogram v4 I2I side-by-side for every creative concept. User gets two takes per brief at negligible cost (~$0.28/concept).
-- **Ideogram v4 I2I VERIFIED** — `ideogram/v4/image-to-image` endpoint confirmed production-ready. Full input format documented with Python examples.
-- **High-conversion prompting** — New `references/high-conversion-prompting.md` covers: stop-scroll formula, color psychology (5 advanced palettes), Z-pattern/F-pattern scanning, eye-line cues, hidden directional arrows, identity anchor pattern, strength parameter tables per concept, fast-fail troubleshooting.
-- **Ad psychology guide** — New `references/ad-psychology-guide.md` (58KB): 20 psychological techniques across color emotion, subliminal scanning, visual persuasion (scarcity, social proof, authority, reciprocity), and stop-scroll triggers.
-- **3-Concept Framework formalized** — Ingredient Story (primary ad) → Spa/Lifestyle (carousel) → Macro Texture (detail). Battle-tested with Vanilla Pink Salt product.
-- **1 image per message** — Critical delivery rule for Telegram/WhatsApp: never batch images.
-- **Live cost tracking** — `x-fal-billable-units` response header documented. Nano Banana = 1 unit ($0.15/image), Ideogram v4 = 0.88 units ($0.13/image).
-- **New reference files:** `model-input-formats.md`, `wix-product-image-extraction.md`, `fal-key-troubleshooting.md`, `high-conversion-prompting.md`, `ad-psychology-guide.md`.
-- **Updated references:** `cost-reference.md` (unit pricing, dual-model cost table), `endpoint-models.md` (Ideogram v4 I2I added, costs updated).
+## [v1.9.0]
 
-#### Features
-- **New skill: `media-gen`** — model-agnostic AI media generation via Fal.ai. Agent performs intent-matched execution: analyzes user intent, selects optimal endpoint via cost-capability trade-off reasoning, then executes. Uses progressive disclosure (context pointers to branch-specific reference files) and leading words (intelligent model routing, task-complexity triage) to force proper model selection. Covers image gen, image edit, video gen, upscale. No PII. Available in `.agents/`, `.claude/`, `.cursor/` directories.
+### Features
+- **New skill: `media-gen`** — model-agnostic Fal.ai media generation for images, image-to-image edits, video, and upscale. Agents classify intent, route via endpoint and cost references, then execute `scripts/generate.py`.
+- **Dual-model ad creative pipeline** — v3 workflow runs Nano Banana Pro Edit and Ideogram v4 I2I side-by-side for social ad concepts, with high-conversion prompting, ad psychology references, and one-image-per-message delivery.
+
+### Fixes
+- `generate.py` now saves every returned image URL, validates URL resolution, supports `--strength` for I2I, handles ffmpeg transcodes without audio, and errors clearly when `--target-height` would require downscaling.
+
+## [v1.8.2]
+
+### Fixes
+- **Safer `.mental/` bootstrap** — agents now verify the exact `.mental/probe` path before creating private data and defer exclude setup or repair to `balakit doctor` instead of modifying global Git configuration themselves.
+- `.mental/` templates now use file-relative links so navigation resolves correctly from nested status and decision files.
+
+### Changes
+- **Mental 2.0 narrows `.mental/` to project continuity** — the default bundle now contains only status, journal, decisions, and durable notes; broad documentation, asset-ingestion, plan, and area hierarchies are no longer scaffolded.
+- Journaling now happens at deterministic task handoffs rather than an ambiguous session end, with one exact next action and concise open loops.
+
+## [v1.8.1]
+
+### Changes
+- **Deep Deliberation 2.0** — replaces fixed ten-person persona panels with a small-model-friendly state machine, two-option evidence tournament, targeted adjudication, explicit uncertainty and reversibility analysis, portable delegate dispatch, and deterministic failure handling.
+
+## [v1.8.0]
+
+### Features
+- **Kit-centric CLI** — `init`, `init --personal`, `init --with-personal`, `add`, `remove`, `list`, `status`, `update`, and `doctor` replace the old flag-soup installer. Interactive mode offers Team kit / Personal layer / Cherry-pick presets; agents are auto-detected.
+- **AGENTS.md-first rules** — team rules write a managed block to `AGENTS.md` + `CLAUDE.md`; Cursor `.mdc` files are written only for glob-scoped rules. Cline/Kilo/omp multi-file fan-out is no longer the default.
+- **Install manifests** — `.balakit/installed.json` (project) and `~/.balakit/installed.json` (personal) track ownership so `status`, `remove`, and `update` work.
+
+### Changes
+- **Personal layer (`mental`) is always global** — rule + skill install to user config; the machine-wide `.mental/` git exclude runs whenever mental is enabled (rule or skill). Project-scope mental wiring is no longer offered. `remove mental` keeps the exclude line (other repos may still have data).
+- Skills remain delegated to skills.sh; the CLI no longer pretends to own skill path maps.
+- Shared rule rendering lives in `bin/lib/render.mjs` and is used by both the consumer installer and `scripts/build-agent-rules.mjs`.
 
 ## [v1.7.1]
 

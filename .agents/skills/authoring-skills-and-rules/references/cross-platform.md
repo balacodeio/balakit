@@ -47,7 +47,8 @@ rules/<name>.mdc            ← source of truth for Cursor rules
 ```
 
 Skills install into a consumer's project via [skills.sh](https://skills.sh)
-(`npx skills add <repo>`); rules are copied manually into `.cursor/rules/`. The
+(`npx skills add <repo>`). Standing rules install via `npx balakit` (AGENTS.md +
+CLAUDE.md managed blocks; Cursor `.mdc` only for glob-scoped rules). The
 `.cursor/`, `.agents/`, and `.claude/` copies inside *this* repo are committed
 mirrors of the `skills/` source of truth.
 

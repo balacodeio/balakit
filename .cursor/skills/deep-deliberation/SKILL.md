@@ -1,290 +1,237 @@
 ---
 name: deep-deliberation
 description: >-
-  MANDATORY 3-stage pipeline when the user invokes deep-deliberation. Stage 1:
-  Tree-of-Thought branches (fill the Problem/Branches/Evaluation/Recommendation
-  template) and STOP at Checkpoint 1. Stage 2: launch 5 parallel expert
-  red-team Task subagents (subagent_type: explore, no model), synthesize, STOP
-  at Checkpoint 2. Stage 3: launch 5 parallel senior-dev red-team Task
-  subagents, synthesize a final recommendation with ranked alternatives, STOP
-  at Checkpoint 3. Three human checkpoints. Do NOT implement, do NOT compress
-  into a quick answer, do NOT skip stages, subagents, or templates. Use when
-  the user explicitly invokes deep-deliberation, or asks to deeply explore /
-  stress-test / red-team a problem, feature idea, architecture choice, or hard
-  decision before committing to an approach.
+  Runs a checkpoint-gated decision process for consequential, forward-looking
+  design choices. Use only when the user explicitly invokes deep-deliberation
+  to compare approaches, challenge assumptions, and reach an evidence-grounded
+  recommendation before implementation. Use dissect instead to audit an
+  existing system or written plan.
+user-invocable: true
 disable-model-invocation: true
-version: "1.4.0"
+invocation-type: manual
+version: "2.0.0"
 author: "Ali Farahat"
-tags: ["deep-deliberation", "orchestration", "red-team", "decision-making"]
+tags: ["decision-making", "red-team", "evidence", "orchestration"]
 when_to_use: |
-  USE WHEN (forward-looking, "what should we build?"):
-  - User explicitly invokes deep-deliberation or asks to "deep think" a problem.
-  - A high-stakes decision is on the table and a wrong approach is expensive to reverse
-    (architecture choice, data model, framework/vendor selection, migration strategy).
-  - The solution space is genuinely open: multiple plausible approaches exist and the
-    tradeoffs are non-obvious.
-  - The user wants an idea, feature, or plan stress-tested / red-teamed before committing.
-  - Ambiguity or disagreement needs to be surfaced and resolved with grounded evidence.
-
+  USE WHEN:
+  - The user explicitly invokes deep-deliberation for a consequential decision.
+  - Multiple viable approaches exist and the tradeoffs are non-obvious.
+  - The cost of choosing incorrectly is meaningfully higher than the cost of deliberating.
   DO NOT USE WHEN:
-  - The task is trivial, mechanical, or has one obvious correct answer (just do it).
-  - Speed matters more than rigor (this pipeline is deliberately heavy: up to 10 subagents
-    + 3 checkpoints).
-  - The goal is to AUDIT or OPTIMIZE an entity that ALREADY EXISTS (a shipped service,
-    written plan, or codebase area). For that, use the companion `dissect` skill instead —
-    deliberation generates and chooses; dissect interrogates ground truth and prunes.
+  - The task is trivial, mechanical, or has one clear answer.
+  - The goal is to audit or optimize something that already exists; use dissect.
 ---
 
 # Deep Deliberation
 
-> **Leading words:** Tree-of-Thought, red-team, phase separation, adversarial,
-> subagent, checkpoint, ground truth, persona, evidence over intent.
+> **Leading words:** option tree, evidence tournament, reversibility,
+> adversarial review, premortem, uncertainty, checkpoint, ground truth.
 
-A structured "deep think" pipeline for high-stakes problems where the cost of a
-wrong approach is high. It explores the solution space, then attacks the chosen
-approach from two independent angles before recommending.
+Deep Deliberation frames a consequential decision, compares viable alternatives,
+tests them against evidence, and adjudicates unresolved risks. The pipeline
+produces a decision record, not implementation.
 
-## NON-NEGOTIABLE (read first)
+## Operating contract
 
-If the user invoked deep-deliberation, this skill **overrides** brevity, Caveman
-mode, and "just answer" instincts until Checkpoint 3 completes. The pipeline is
-the deliverable — a quick answer is a failure mode, not a shortcut.
+- Do not edit files, implement code, or create formal plan documents while the
+  pipeline is active.
+- Ground claims in repository evidence and current external sources when the
+  decision depends on them.
+- Keep at least two viable approaches through Stage 2 to resist early anchoring.
+- Preserve material disagreements; never silently average them away.
+- Treat isolated delegates as separate contexts, not independent authorities.
+- Never invent missing delegate findings or unsupported evidence.
+- Stop after every checkpoint. Continue only after the user explicitly responds.
+- The user may revise, restart, or end the pipeline at any checkpoint.
+- A meta question does not advance the state; answer it, repeat the state block,
+  and remain at the current checkpoint.
 
-**Per-turn rules:**
-1. First lines of every deliberation message: the Progress checklist (copy from
-   the *Pipeline overview* section below). Track out loud every turn.
-2. Stage 1 output **must** include these headers exactly: `## Problem`,
-   `## Branches`, `### Branch A —`, …, `## Evaluation`, `## Recommendation`.
-   Missing any header = non-compliant. Do not substitute tables, diagrams-only,
-   or narrative summaries for the template.
-3. **Forbidden in Stage 1:** implementation, file edits, `AskQuestion` without
-   the full Stage 1 template above it, fewer than 3 branches.
-4. **Forbidden before Checkpoint 1 answer:** `Task` tool, Stage 2/3 content,
-   code changes (Agent mode), plan documents (Plan mode).
-5. **Stage 2 requires proof of launch.** Your assistant message **must** contain
-   exactly **5** `Task` invocations (`subagent_type: "explore"`, no `model`) in
-   **one** turn, plus an `## Expert panel` header listing the 5 personas, plus
-   a `## Findings` synthesis **after** all 5 Task results return, plus
-   `CHECKPOINT 2 — waiting for your reply`. If any persona is skipped, state
-   `SUBAGENT_LAUNCH_FAILED` and why — do not fake a panel.
-6. **Stage 3 mirrors Stage 2** with 5 senior-dev personas and ends with the
-   Final template + `CHECKPOINT 3 — waiting for your reply`.
-7. **End every stage** with the literal phrase: `CHECKPOINT N — waiting for
-   your reply. I will not proceed until you respond.`
-8. **`disable-model-invocation: true` applies to the orchestrator's auto-load**,
-   not to subagent dispatch. The orchestrator **must still call `Task`** for
-   Stage 2 and Stage 3 — the flag does not excuse launching subagents.
+## Runtime state
 
-**Self-check before sending each stage output:**
-- Progress checklist present? Y/N
-- Required template headers present? Y/N
-- No code edits (Agent mode) / no plan docs (Plan mode)? Y/N
-- Checkpoint stop stated in literal phrase? Y/N
-- For Stage 2/3: 5 `Task` calls in one turn? Y/N
+Start every pipeline response with this block and update it mechanically:
 
-If any answer is N, fix before sending.
-
-## Core principles
-
-- **Subagents inherit the parent model.** Do NOT pass a `model` to the `Task`
-  tool — every subagent must run on the same LLM as the orchestrating agent.
-- **Three human checkpoints.** The pipeline STOPS after each stage and waits for
-  the user. Never skip a checkpoint or run stages back-to-back without consent.
-- **Grounded in real code.** Expert and senior-dev subagents run readonly and
-  explore the actual repository so the debate reflects the real codebase, not
-  abstractions.
-- **Red-team, not rubber-stamp.** "Adversarial" here means devil's-advocate:
-  personas actively attack the idea, surface failure modes, then the strongest
-  surviving position wins. No premature consensus.
-- **The orchestrator pushes back.** Between stages, the main agent injects its
-  own challenges and recommendations — it is a participant, not a passive router.
-- **Mode-Aware Results Treatment.** Recognize the current Cursor active mode:
-  - **Plan Mode:** Do NOT create, propose, or write formal implementation plans or files (such as `.md` docs or architectural specs) during intermediate stages. The plan should ONLY be created and presented after the entire deep deliberation has completed (after Stage 3 is done), ensuring it is fully informed by all red-teaming phases.
-  - **Agent Mode:** Do NOT create or edit any codebase files during the deliberation stages. Wait until the entire 3-stage deep deliberation has completed and the user has explicitly approved the final recommendation.
-  - **Ask Mode:** Focus purely on deep, conceptual/educational reviews and exploration of existing code. No implementation plans or code changes are proposed.
-- **True Independent Sub-agents.** Each expert or senior-developer persona must be run as an independent sub-agent. Launch each persona as a separate `Task` tool call in parallel to ensure their perspectives remain isolated and truly adversarial.
-- **File-Grounded Context.** Sub-agents must be given sufficient context to perform real-world analysis. The orchestrator must identify and pass specific relevant file paths, directories, and structural context of the codebase into each sub-agent's prompt, directing them exactly where to look.
-
-## Pipeline overview
-
-```
-USER input (problem / feature / issue / decision)
-   ↓
-[Stage 1] Tree of Thought          (orchestrator)
-   🛑 CHECKPOINT 1 — user picks/adjusts a branch
-   ↓
-[Stage 2] Expert red-team          (5 independent persona subagents, readonly)
-   🛑 CHECKPOINT 2 — user reviews findings / steers
-   ↓
-[Stage 3] Senior-dev red-team      (5 independent persona subagents, readonly)
-   🛑 CHECKPOINT 3 — user makes final call
-   ↓
-FINAL recommendation + ranked alternatives (with Mode-Specific Output)
+```text
+DELIBERATION_STATE
+stage: 1 | 2 | 3
+checkpoint: none | 1 | 2 | 3
+shortlist: unset | A,B
+delegate_results: 0/N
+next_action: one action only
 ```
 
-Copy this checklist and track progress out loud:
+If the state is missing after a context change, reconstruct it from the latest
+completed template and ask the user to confirm before advancing.
 
+## Pipeline
+
+1. **Stage 1 — Frame and shortlist:** define the decision, generate 3–5
+   approaches, and shortlist the strongest two.
+2. **Checkpoint 1:** user approves the framing and shortlist.
+3. **Stage 2 — Evidence tournament:** 3–5 focused reviewers compare both
+   shortlisted approaches using a normalized evidence contract.
+4. **Checkpoint 2:** user reviews findings and unresolved disputes.
+5. **Stage 3 — Adjudication:** targeted evidence review and premortem produce the
+   final recommendation.
+6. **Checkpoint 3:** user approves, revises, or rejects the recommendation.
+
+No implementation follows automatically. Wait for an explicit post-pipeline
+request.
+
+## Stage 1 — Frame and shortlist
+
+Stage 1 is performed by the orchestrator without delegates.
+
+### Entry gate
+
+If the decision is materially ambiguous, ask focused clarification before
+starting Stage 1. If the task primarily audits something already built or
+written, recommend `dissect` instead.
+
+### Procedure
+
+1. Inspect relevant code, schemas, documentation, constraints, and prior
+   decisions.
+2. State the decision, desired outcome, constraints, non-goals, assumptions,
+   evidence gaps, decision horizon, reversibility, and cost of delay.
+3. Declare evaluation criteria before evaluating options. Use `must`,
+   `important`, and `preference`; use numeric weights only when defensible.
+4. Generate 3–5 meaningfully different approaches. For each, state its
+   mechanism, expected benefit, main downside, critical assumptions, supporting
+   evidence, reversibility, rough effort, and failure condition.
+5. Remove clearly dominated options with an explicit reason.
+6. Shortlist the strongest option and strongest challenger. Relabel them
+   `Option A` and `Option B` for the remaining stages. Do not make the final
+   recommendation yet.
+
+Read [references/output_templates.md](references/output_templates.md), emit the
+complete Stage 1 template, set `checkpoint: 1`, and stop.
+
+Checkpoint 1 choices:
+
+- Approve the framing and shortlist.
+- Replace, merge, or revise an option.
+- Change criteria or constraints.
+- End the pipeline because the decision is now obvious.
+
+## Stage 2 — Evidence tournament
+
+Stage 2 compares both shortlisted approaches. It does not defend a winner chosen
+in Stage 1.
+
+### Reviewer missions
+
+Use these four default missions:
+
+1. **Feasibility and integration**
+2. **Failure, security, and edge cases**
+3. **Operations, migration, and cost**
+4. **Challenger advocate**
+
+Add one domain specialist only when the decision clearly requires expertise not
+covered above. Omit a default mission only when it is demonstrably irrelevant;
+never run fewer than three reviews without user approval.
+
+### Procedure
+
+1. Identify specific repository files and authoritative external sources needed
+   to evaluate the decision.
+2. Read [references/subagent_prompt.md](references/subagent_prompt.md).
+3. Launch one isolated, read-only delegate per mission using the host's supported
+   mechanism. Use the host's default model unless the user requested another.
+4. Launch delegates together when parallel dispatch is available. Launch and
+   synthesis are separate assistant steps.
+5. After results return, normalize and cluster them into evidence-backed
+   blockers, fixable risks, minor concerns, unverified claims, disagreements,
+   and evidence favoring the challenger.
+6. If evidence invalidates both options, return to Stage 1 after user approval.
+
+Each delegate returns no more than three findings. Every finding must contain:
+
+```text
+claim:
+evidence:
+source:
+impact: blocker | fixable | minor | unverified
+confidence: high | medium | low
+affected_option: A | B | both
+falsifier:
 ```
-Progress:
-- [ ] Stage 1: Tree of Thought → recommend branch
-- [ ] CHECKPOINT 1
-- [ ] Stage 2: Expert red-team (5 independent personas)
-- [ ] CHECKPOINT 2
-- [ ] Stage 3: Senior-dev red-team (5 independent personas)
-- [ ] CHECKPOINT 3 → final recommendation + mode-specific output
-```
 
----
+A blocker without evidence is `unverified`, not fatal.
 
-## Stage 1 — Tree of Thought (orchestrator)
+Read [references/output_templates.md](references/output_templates.md), emit the
+complete Stage 2 template, set `checkpoint: 2`, and stop.
 
-Done by the main agent directly (no subagents).
+Checkpoint 2 choices:
 
-0. **Ground before branching (ground truth beats intent).** If the problem touches
-   existing code, data, or a written plan, do a quick read of the real artifacts
-   first — actual schema, the function bodies, what the plan says vs what ships.
-   Branches that ignore ground truth waste a checkpoint. If the system being changed
-   already exists and the real question is "what is actually here and what should
-   change?", stop and run the `dissect` skill instead of generating branches.
-1. **Restate the problem** in one or two sentences. Surface assumptions and any
-   ambiguity. If the problem is unclear, ask before generating branches.
-2. **Generate 3–5 distinct branches** (meaningfully different approaches, not
-   variations of one). For each branch capture:
-   - One-line summary
-   - Key idea / mechanism
-   - Pros, cons, main risk
-   - Rough effort (S / M / L)
-3. **Evaluate & prune.** Score each branch against the criteria that matter for
-   this problem (e.g. correctness, effort, risk, maintainability, fit with
-   existing code). Prune clearly dominated branches and say why.
-4. **Recommend** the strongest branch with a short rationale, plus the runner-up.
-5. **Add the orchestrator's own pushback** — at least one challenge to your own
-   recommendation.
-6. **Copy the Stage 1 template skeleton** (see *Output templates* below) into
-   your response and fill every section. Do not substitute tables, diagrams-only,
-   or narrative summaries. Each branch **must** use the heading
-   `### Branch X — [name]`.
+- Proceed to adjudication.
+- Revise an option and repeat Stage 2.
+- Reopen Stage 1 with changed criteria or alternatives.
+- End the pipeline.
 
-Present using the Stage 1 template, then STOP. Literal phrase to end the turn:
-`CHECKPOINT 1 — waiting for your reply. I will not proceed until you respond.`
+## Stage 3 — Adjudication
 
-### 🛑 Checkpoint 1
+Stage 3 resolves uncertainty instead of repeating Stage 2 with new personas.
 
-Ask the user (use the AskQuestion tool when available): which branch to carry
-forward, or whether to adjust/merge branches. Do not proceed until they answer.
+Run these two read-only review missions:
 
-**If AskQuestion returns no selection:** do not advance to Stage 2. Re-print
-the Progress checklist and the Stage 1 Recommendation. Ask again in plain text
-using branch letters (A–E). Meta questions (e.g. "did you follow the skill?")
-are answered without advancing the pipeline — answer the meta question, then
-restore the checklist and wait at Checkpoint 1.
+1. **Evidence adjudicator:** verify disputed and high-impact claims; distinguish
+   corroboration from repeated assertion.
+2. **Premortem challenger:** assume the leading option failed six months after
+   launch, identify the most plausible causes, and present the strongest
+   remaining case for the runner-up.
 
----
+Add a third domain adjudicator only when a Stage 2 dispute requires specialized
+resolution.
 
-## Stage 2 — Expert red-team (subagents)
+The orchestrator then produces:
 
-Goal: stress-test the **selected branch** from diverse expert angles.
+- Recommendation and rationale
+- Comparison against the declared criteria
+- Evidence that determined the decision
+- Verified and unverified assumptions
+- Material disagreements
+- Reversibility and rollback cost
+- Premortem risks and mitigations
+- Conditions that would change the recommendation
+- Ranked alternatives
+- Cheapest experiment or spike that could reduce remaining uncertainty
+- One next action appropriate to the session's current capabilities
 
-1. **Design 5 personas** tailored to the problem domain. Each persona needs:
-   - Name + role (e.g. "Distributed-systems architect")
-   - Skillset, years/level of experience, specific domain knowledge
-   - The angle/bias they bring (e.g. security hawk, performance, UX, cost, ops)
-2. **Launch 5 independent subagents in parallel** — one `Task` call per persona in a single
-   message. Use `subagent_type: "explore"` (readonly, repo-aware) so they ground
-   their critique in the real codebase. **Do not pass a `model`.**
-3. **Identify relevant files.** The orchestrator must list specific files and directories in the workspace relevant to this feature or change and include them in the prompt.
-4. Each subagent prompt MUST include: the full problem, the selected branch, the
-   persona definition, specific relevant file paths/context, and a demand to **attack first** (failure
-   modes, edge cases, hidden costs) then concede what survives.
-5. **Orchestrator synthesizes**: cluster the attacks, mark which are fatal vs
-   fixable, note disagreements between experts, and add your own pushback.
+Read [references/output_templates.md](references/output_templates.md), emit the
+complete Final template, set `checkpoint: 3`, and stop.
 
-Use the subagent prompt template (see
-[references/subagent_prompt.md](references/subagent_prompt.md)). Present findings
-via the Stage 2 template (see [references/output_templates.md](references/output_templates.md)),
-then STOP. Literal phrase to end the turn:
-`CHECKPOINT 2 — waiting for your reply. I will not proceed until you respond.`
+Checkpoint 3 choices:
 
-### 🛑 Checkpoint 2
+- Approve the recommendation.
+- Request revision.
+- Select an alternative.
+- Request planning or implementation as a separate next action.
 
-Ask the user whether to proceed to the senior-dev review, revise the branch
-based on findings, or loop back to Stage 1. Wait for their answer. Apply the
-same AskQuestion-no-answer behavior as Checkpoint 1 (re-print, ask in plain
-text, do not advance).
+## Delegate failure protocol
 
----
+1. Retry one transient delegate failure.
+2. Report unavailable missions explicitly.
+3. If fewer than three Stage 2 reviews or fewer than two Stage 3 reviews return,
+   ask whether to retry or continue in labelled degraded mode.
+4. If delegation is unavailable, state `DELEGATED_REVIEW_UNAVAILABLE` and ask
+   before substituting isolated orchestrator passes.
+5. Never synthesize findings that were not returned.
 
-## Stage 3 — Senior-dev red-team (subagents)
+## Completion check
 
-Goal: a panel of senior engineers debates the **combined Stage 1 + Stage 2
-output** and produces the final call.
+Before declaring the pipeline complete, verify:
 
-1. **Design 5 senior-developer personas** (staff/principal level, varied
-   specialties — backend, frontend, infra/DevOps, security, product-eng).
-2. **Launch 5 independent subagents in parallel** (`subagent_type: "explore"`, readonly, no
-   `model`). Feed them: original problem, selected branch, Stage 2 findings, specific relevant file paths, and
-   the repo. Task them to red-team the *findings and the plan itself* — including
-   whether the experts missed something or over-indexed on a risk.
-3. **Orchestrator synthesizes** into a single FINAL recommendation with ranked
-   alternatives, explicit risks, and a concrete next step, aligned with the active coding mode.
-
-Present via the Final template (see
-[references/output_templates.md](references/output_templates.md)), then STOP.
-Literal phrase to end the turn:
-`CHECKPOINT 3 — waiting for your reply. I will not proceed until you respond.`
-
-### 🛑 Checkpoint 3
-
-Present the final recommendation and ranked alternatives. Ask the user how they
-want to proceed. Do not start implementing unless they ask. Apply the same
-AskQuestion-no-answer behavior as Checkpoint 1.
-
----
+- At least two viable approaches received adversarial comparison.
+- High-impact claims carry evidence or are labelled unverified.
+- Reversibility and residual uncertainty are explicit.
+- Material disagreements remain visible.
+- The recommendation states what evidence would overturn it.
+- No implementation occurred before explicit post-checkpoint approval.
 
 ## References
 
-Branch-specific material lives behind context pointers — pull only when you
-reach that stage:
-
-- [references/subagent_prompt.md](references/subagent_prompt.md) — subagent
-  prompt template + persona design notes for Stage 2 (expert red-team) and
-  Stage 3 (senior-dev red-team).
-- [references/output_templates.md](references/output_templates.md) — Stage 1
-  (Tree of Thought), Stage 2 (Expert red-team), and Final recommendation
-  templates.
-
----
-
-## Notes
-
-- This pipeline is deliberately heavy (up to 10 subagents + 3 checkpoints). Use
-  it for consequential decisions, not quick questions.
-- If the problem turns out trivial after Stage 1, say so and offer to stop early
-  rather than forcing the full pipeline.
-- Keep each subagent prompt self-contained: subagents do not see the user's
-  messages or prior stages unless you include that context in the prompt.
-- **Companion skill — `dissect`.** Deep-deliberation is generative: it explores a
-  solution space and chooses an approach for something not yet built. When the target
-  already exists (a shipped service, a written plan, a codebase area) and the goal is
-  to interrogate it against ground truth and arrive at the minimal-build change, use
-  `dissect`. The two skills share DNA — adversarial red-team subagents, human
-  checkpoints, evidence over intent — but point in opposite directions: deliberation
-  looks forward (design), dissect looks backward (audit).
-
-## Anti-patterns (non-compliant output)
-
-Any of the following is a skill violation — correct and re-emit the stage:
-
-- "Here are a few options…" without `### Branch A —` / `### Branch B —` headers.
-- Recommendation present but no `## Evaluation` section.
-- "I'll run expert review next" without 5 `Task` calls in the same turn (Stage 2).
-- `AskQuestion` as the only message content — branches must be in the message body.
-- Implementing code (Agent mode) or writing a plan doc (Plan mode) while a
-  checkpoint is open.
-- Synthesizing expert findings without 5 `Task` results returned.
-- Skipping a checkpoint because the user asked a meta question — answer the meta
-  question, then restore the Progress checklist and wait at the current checkpoint.
-- Forgetting the Progress checklist at the top of any deliberation message.
-- Ending a stage without the literal `CHECKPOINT N — waiting for your reply.`
-  phrase.
-```
+- [references/subagent_prompt.md](references/subagent_prompt.md) — portable
+  delegate dispatch, reviewer prompt, evidence contract, and failure handling.
+- [references/output_templates.md](references/output_templates.md) — exact
+  Stage 1, Stage 2, and Final response structures.

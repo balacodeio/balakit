@@ -12,11 +12,11 @@ Agent: read only the section matching your classified capability branch. Perform
 
 | Key | Endpoint ID (fal_id) | best_for | cost_tier | speed | notes |
 |-----|---------------------|----------|-----------|-------|-------|
-| seedream-v5-pro | `bytedance/seedream/v5/pro/text-to-image` | Photorealistic, 14-language text rendering, dense layouts | moderate | medium | ByteDance flagship. Natural-language prompts |
-| seedream-v5-lite | `bytedance/seedream/v5/lite/text-to-image` | Fast iteration drafts, testing prompts | cheap | fast | Cheaper variant of Seedream Pro |
-| qwen-image | `fal-ai/qwen-image` | Complex text rendering (Chinese, Arabic), precise edits | moderate | medium | Alibaba Qwen. Strong for text-heavy images |
+| seedream-v5-pro | `bytedance/seedream/v5/pro/text-to-image` | Photorealistic, 14-language text rendering, dense layouts | moderate | medium | ByteDance flagship. Uses `--size` presets (square, square_hd, etc.) |
+| seedream-v5-lite | `bytedance/seedream/v5/lite/text-to-image` | Fast iteration drafts, testing prompts | cheap | fast | Cheaper variant of Seedream Pro. Uses `--size` presets |
+| qwen-image | `fal-ai/qwen-image` | Complex text rendering (Chinese, Arabic), precise edits | moderate | medium | Alibaba Qwen |
 | nano-banana-pro | `fal-ai/nano-banana-pro` | Photorealistic and stylized fallback | moderate | medium | Text-to-image ONLY, ignores image_urls |
-| flux-2-klein | `fal-ai/flux-2/klein/9b` | Open-weights photorealism, strong prompt adherence | moderate | medium | Black Forest Labs FLUX.2 Klein 9B |
+| flux-2-klein | `fal-ai/flux-2/klein/9b` | Open-weights photorealism, strong prompt adherence | moderate | medium | Black Forest Labs FLUX.2 Klein 9B. Uses `--aspect-ratio` |
 | flux-2-pro | `fal-ai/flux-2-pro` | Premium quality, best prompt adherence | premium | medium | Black Forest Labs top tier |
 | flux-2-turbo | `fal-ai/flux-2/turbo` | Fastest FLUX iteration | moderate | fast | Good for rapid prototyping |
 | recraft-v3 | `fal-ai/recraft-v3` | Illustration, vector-like, brand styles | moderate | medium | Good for marketing graphics |
@@ -27,7 +27,8 @@ Agent: read only the section matching your classified capability branch. Perform
 | Key | Endpoint ID (fal_id) | best_for | cost_tier | notes |
 |-----|---------------------|----------|-----------|-------|
 | seedream-v5-pro-edit | `bytedance/seedream/v5/pro/edit` | Edit existing images: inpainting, style transfer | moderate | Accepts `image_url` |
-| nano-banana-pro-edit | `fal-ai/nano-banana-pro/edit` | Edit with reference image preservation | moderate | Honors `image_urls` for identity/composition |
+| nano-banana-pro-edit | `fal-ai/nano-banana-pro/edit` | Edit with reference image preservation | moderate | Honors `image_urls` for identity/composition. 1 unit = $0.15/image |
+| ideogram-v4-i2i | `ideogram/v4/image-to-image` | Ideogram's remix/edit. Structured JSON prompting, crisp text, clean commercial look | cheap | **VERIFIED** (2026-07-10). 0.88 units ≈ $0.13/image. Uses `image_url` (string), `strength`, `style_type`, `aspect_ratio` |
 | flux-2-pro-edit | `fal-ai/flux-2-pro/edit` | Premium-quality edits with FLUX.2 | premium | Best quality edits |
 
 ## Video Models (Image-to-Video)
