@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.8.2]
+
+### Fixes
+- **Safer `.mental/` bootstrap** — agents now verify the exact `.mental/probe` path before creating private data and defer exclude setup or repair to `balakit doctor` instead of modifying global Git configuration themselves.
+- `.mental/` templates now use file-relative links so navigation resolves correctly from nested status and decision files.
+
+### Changes
+- **Mental 2.0 narrows `.mental/` to project continuity** — the default bundle now contains only status, journal, decisions, and durable notes; broad documentation, asset-ingestion, plan, and area hierarchies are no longer scaffolded.
+- Journaling now happens at deterministic task handoffs rather than an ambiguous session end, with one exact next action and concise open loops.
+
 ## [v1.8.1]
 
 ### Changes

@@ -92,6 +92,7 @@ test("checkMentalExcluded reports ok after ensure", () => {
   const c = checkMentalExcluded({ home });
   assert.equal(c.hasLine, true);
   assert.equal(c.configured, true);
+  assert.equal(c.liveIgnored, true, ".mental/probe preflight path is protected");
 });
 
 test("checkMentalExcluded reports missing when nothing is set up", () => {

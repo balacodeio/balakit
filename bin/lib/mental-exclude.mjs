@@ -2,7 +2,7 @@
  * Machine-wide git excludes for `.mental/` — never a repo `.gitignore`.
  *
  * The mental rule promises `.mental/` stays out of git via core.excludesfile.
- * If that promise isn't kept, a private second-brain can be `git add -A`'d and
+ * If that promise isn't kept, a private continuity log can be `git add -A`'d and
  * pushed. These helpers make the guarantee real, idempotent, and testable.
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -12,7 +12,7 @@ import { spawnSync } from "node:child_process";
 
 export const MENTAL_IGNORE_LINE = ".mental/";
 export const MENTAL_IGNORE_COMMENT =
-  "# balakit: private second-brain (mental skill) — never commit";
+  "# balakit: private project continuity (mental skill) — never commit";
 
 /** Run a git command (honors GIT_CONFIG_GLOBAL in tests). */
 export function runGit(...args) {

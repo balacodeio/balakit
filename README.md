@@ -10,7 +10,7 @@ through [skills.sh](https://skills.sh/); standing rules land **AGENTS.md-first**
 
 > Take what you like, ignore the rest: meta-principle, simplicity ladder,
 > changelog/testing/comments discipline, SEO guardrails, and a personal
-> `.mental/` second-brain.
+> `.mental/` project-continuity layer.
 
 ## Quick start
 
@@ -86,14 +86,14 @@ Ownership is tracked in `.balakit/installed.json` (project) and
 ## The `.mental/` personal knowledge layer
 
 `mental` (rule + skill) teaches agents to maintain a **private, gitignored,
-per-repo second-brain** — an Open Knowledge Format bundle at `.mental/`. The
-agent creates it on first substantive work, re-orients before non-trivial work,
-journals after, and records decisions.
+per-repo continuity log** at `.mental/`. It derives current state from git, the
+latest exact handoff, and open decisions; then records only consequential
+decisions and durable facts that git cannot explain.
 
 **Git contract (non-negotiable):** `.mental/` is ignored via your **global** git
-excludes (`core.excludesfile`, typically `~/.config/git/ignore`). Agents and the
-CLI never write a repo `.gitignore` entry for it — that would leak a personal
-convention into shared history.
+excludes (`core.excludesfile`, typically `~/.config/git/ignore`). The CLI doctor
+owns exclude setup and repair. Agents never modify git configuration or write a
+repo `.gitignore` entry for it.
 
 ```bash
 npx balakit doctor   # verify / repair the exclude
@@ -121,7 +121,7 @@ npx balakit doctor   # verify / repair the exclude
 | `documentation-writer` | Research-first technical documentation workflow |
 | `everything-seo` | Comprehensive SEO playbook |
 | `marketing-psychology` | Psychology for product and marketing copy |
-| `mental` | Maintain a repo's `.mental/` second-brain (OKF) |
+| `mental` | Private project continuity: decisions, outcomes, and exact handoffs |
 | `nlm-skill` | NotebookLM CLI (`nlm`) and MCP server expert |
 | `seo-audit` | SEO audit workflow |
 | `startup-marketing-brain` | Startup marketing: distribution, AI automation, monetization |
