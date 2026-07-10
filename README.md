@@ -116,7 +116,7 @@ npx balakit doctor   # verify / repair the exclude
 | --- | --- |
 | `authoring-skills-and-rules` | Meta-skill: create/update Skills and rules across agents |
 | `cloakbrowser-fallback` | Stealth Chromium when normal automation is blocked |
-| `deep-deliberation` | Tree-of-Thought + red-team debates before building |
+| `deep-deliberation` | Checkpointed option comparison, evidence tournament, and adjudication before building |
 | `dissect` | Audit an existing service/plan into a minimal-build plan |
 | `documentation-writer` | Research-first technical documentation workflow |
 | `everything-seo` | Comprehensive SEO playbook |

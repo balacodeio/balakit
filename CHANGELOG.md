@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.8.1]
+
+### Changes
+- **Deep Deliberation 2.0** — replaces fixed ten-person persona panels with a small-model-friendly state machine, two-option evidence tournament, targeted adjudication, explicit uncertainty and reversibility analysis, portable delegate dispatch, and deterministic failure handling.
+
 ## [v1.8.0]
 
 ### Features
