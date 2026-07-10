@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+#### Features
+- **New skill: `media-gen`** — model-agnostic AI media generation via Fal.ai. Agent performs intent-matched execution: analyzes user intent, selects optimal endpoint via cost-capability trade-off reasoning, then executes. Uses progressive disclosure (context pointers to branch-specific reference files) and leading words (intelligent model routing, task-complexity triage) to force proper model selection. Covers image gen, image edit, video gen, upscale. No PII. Available in `.agents/`, `.claude/`, `.cursor/` directories.
+
 ## [v1.7.1]
 
 ### Fixes

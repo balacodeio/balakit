@@ -1,0 +1,4 @@
+{
+  "output_dir": "~/Documents/Media Gen",
+  "_comment": "Output root. Each generation creates a dated subfolder here. Tilde expansion supported."
+}
