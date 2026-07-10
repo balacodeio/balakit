@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+#### Major Update: `media-gen` v3.0 — Dual-Model High-Conversion Image Generation
+- **Dual-model generation** — Always runs Nano Banana Pro Edit + Ideogram v4 I2I side-by-side for every creative concept. User gets two takes per brief at negligible cost (~$0.28/concept).
+- **Ideogram v4 I2I VERIFIED** — `ideogram/v4/image-to-image` endpoint confirmed production-ready. Full input format documented with Python examples.
+- **High-conversion prompting** — New `references/high-conversion-prompting.md` covers: stop-scroll formula, color psychology (5 advanced palettes), Z-pattern/F-pattern scanning, eye-line cues, hidden directional arrows, identity anchor pattern, strength parameter tables per concept, fast-fail troubleshooting.
+- **Ad psychology guide** — New `references/ad-psychology-guide.md` (58KB): 20 psychological techniques across color emotion, subliminal scanning, visual persuasion (scarcity, social proof, authority, reciprocity), and stop-scroll triggers.
+- **3-Concept Framework formalized** — Ingredient Story (primary ad) → Spa/Lifestyle (carousel) → Macro Texture (detail). Battle-tested with Vanilla Pink Salt product.
+- **1 image per message** — Critical delivery rule for Telegram/WhatsApp: never batch images.
+- **Live cost tracking** — `x-fal-billable-units` response header documented. Nano Banana = 1 unit ($0.15/image), Ideogram v4 = 0.88 units ($0.13/image).
+- **New reference files:** `model-input-formats.md`, `wix-product-image-extraction.md`, `fal-key-troubleshooting.md`, `high-conversion-prompting.md`, `ad-psychology-guide.md`.
+- **Updated references:** `cost-reference.md` (unit pricing, dual-model cost table), `endpoint-models.md` (Ideogram v4 I2I added, costs updated).
+
 #### Features
 - **New skill: `media-gen`** — model-agnostic AI media generation via Fal.ai. Agent performs intent-matched execution: analyzes user intent, selects optimal endpoint via cost-capability trade-off reasoning, then executes. Uses progressive disclosure (context pointers to branch-specific reference files) and leading words (intelligent model routing, task-complexity triage) to force proper model selection. Covers image gen, image edit, video gen, upscale. No PII. Available in `.agents/`, `.claude/`, `.cursor/` directories.
 
