@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.8.0]
+
+### Features
+- **Kit-centric CLI** — `init`, `init --personal`, `init --with-personal`, `add`, `remove`, `list`, `status`, `update`, and `doctor` replace the old flag-soup installer. Interactive mode offers Team kit / Personal layer / Cherry-pick presets; agents are auto-detected.
+- **AGENTS.md-first rules** — team rules write a managed block to `AGENTS.md` + `CLAUDE.md`; Cursor `.mdc` files are written only for glob-scoped rules. Cline/Kilo/omp multi-file fan-out is no longer the default.
+- **Install manifests** — `.balakit/installed.json` (project) and `~/.balakit/installed.json` (personal) track ownership so `status`, `remove`, and `update` work.
+
+### Changes
+- **Personal layer (`mental`) is always global** — rule + skill install to user config; the machine-wide `.mental/` git exclude runs whenever mental is enabled (rule or skill). Project-scope mental wiring is no longer offered. `remove mental` keeps the exclude line (other repos may still have data).
+- Skills remain delegated to skills.sh; the CLI no longer pretends to own skill path maps.
+- Shared rule rendering lives in `bin/lib/render.mjs` and is used by both the consumer installer and `scripts/build-agent-rules.mjs`.
+
 ## [v1.7.1]
 
 ### Fixes
