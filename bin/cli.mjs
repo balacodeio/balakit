@@ -6,8 +6,8 @@
  * Skills are delegated to skills.sh. Mental always enables the machine-wide
  * `.mental/` git exclude (never a repo `.gitignore`).
  */
-import { pathToFileURL } from "node:url";
 import { VERSION } from "./lib/pkg.mjs";
+import { isCliEntry } from "./lib/entry.mjs";
 import { parseArgv, usage } from "./lib/args.mjs";
 import { cmdInit } from "./commands/init.mjs";
 import { cmdAdd } from "./commands/add.mjs";
@@ -99,6 +99,6 @@ async function main() {
   process.exit(code);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isCliEntry(import.meta.url)) {
   main();
 }

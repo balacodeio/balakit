@@ -14,8 +14,11 @@ through [skills.sh](https://skills.sh/); standing rules land **AGENTS.md-first**
 
 ## Quick start
 
+Run through **`npx`** (recommended) or a **global install** — bare `balakit` is
+not on your `PATH` until you install globally.
+
 ```bash
-npx balakit                 # interactive: Team kit | Personal layer | Cherry-pick
+npx balakit                 # interactive menu: Team kit | Personal | Cherry-pick
 npx balakit init            # team defaults → this project
 npx balakit init --personal # mental (global) + git exclude + doctor
 npx balakit init --with-personal
@@ -31,9 +34,28 @@ npx balakit remove testing
 npx balakit doctor
 ```
 
+Optional global install (Linux, macOS, WSL, Windows):
+
+```bash
+npm install -g balakit
+balakit init
+```
+
 No agent multiselect by default — agents are **auto-detected**. Override with
 `--agents cursor,claude-code` or `--agents all`. Preview with `--dry-run`; skip
 prompts with `-y`.
+
+### Interactive menu
+
+`npx balakit` with no subcommand opens a terminal UI (arrow keys + Enter):
+
+1. **Team kit** — project rules (`global`, `testing`, `comments`, `changelog`)
+2. **Personal layer** — global `mental` rule + skill + `.mental/` git exclude
+3. **Team kit + personal layer**
+4. **Cherry-pick** — choose individual rules and skills
+
+Use `-y` to skip confirmation prompts, or pass a subcommand directly
+(`init`, `add`, `list`, …).
 
 ## What gets installed
 

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.9.1]
+
+### Fixes
+- **CLI silent no-op via `npx` / global install** — resolve npm `.bin` symlinks before comparing the entry path so `npx balakit`, the interactive menu, and subcommands run on Linux, macOS, and WSL instead of exiting with no output.
+
 ## [v1.9.0]
 
 ### Features
