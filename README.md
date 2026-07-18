@@ -146,6 +146,7 @@ npx balakit doctor   # verify / repair the exclude
 | `media-gen` | Fal.ai image, video, and upscale generation with dual-model ad creative workflow |
 | `mental` | Private project continuity: decisions, outcomes, and exact handoffs |
 | `nlm-skill` | NotebookLM CLI (`nlm`) and MCP server expert |
+| `release-deploy` | GitHub tag releases: main→production, staging→beta; changelog-driven notes |
 | `seo-audit` | SEO audit workflow |
 | `startup-marketing-brain` | Startup marketing: distribution, AI automation, monetization |
 

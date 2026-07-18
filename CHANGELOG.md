@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Features
+- **New skill: `release-deploy`** — GitHub tag + Release workflow for beta (`staging`) and production (`main`), with first-time project interview, changelog-sourced notes, and Cloudflare/desktop platform refs.
+
 ## [v1.9.1]
 
 ### Fixes
