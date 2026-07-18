@@ -3,83 +3,85 @@
 [![npm](https://img.shields.io/npm/v/balakit)](https://www.npmjs.com/package/balakit)
 [![license](https://img.shields.io/npm/l/balakit)](LICENSE)
 
-**Opinionated rules and skills for AI coding agents.** One kit, package-manager
-verbs — install into your project (team) or your machine (personal). Skills go
-through [skills.sh](https://skills.sh/); standing rules land **AGENTS.md-first**
-(plus a `CLAUDE.md` adapter and Cursor `.mdc` only when globs matter).
+**Opinionated rules and skills for AI coding agents.** Guided setup installs a
+capability-aware kit: standing rules land **AGENTS.md-first** (plus `CLAUDE.md`
+and Cursor `.mdc` when needed); skills go through
+[skills.sh](https://skills.sh/). Mental continuity tooling and `.mental/` data
+policy are chosen explicitly.
 
 > Take what you like, ignore the rest: meta-principle, simplicity ladder,
-> changelog/testing/comments discipline, SEO guardrails, and a personal
-> `.mental/` project-continuity layer.
+> changelog/testing/comments discipline, SEO guardrails, and a `.mental/`
+> project-continuity layer.
 
 ## Quick start
 
-Run through **`npx`** (recommended) or a **global install** — bare `balakit` is
-not on your `PATH` until you install globally.
-
 ```bash
-npx balakit                 # interactive menu: Team kit | Personal | Cherry-pick
-npx balakit init            # team defaults → this project
-npx balakit init --personal # mental (global) + git exclude + doctor
-npx balakit init --with-personal
+npx balakit                 # guided setup: plan → review → apply
+npx balakit init            # same guided flow
+npx balakit init --personal -y --mental-data global-exclude
+npx balakit init --with-personal -y
 ```
 
 ```bash
 npx balakit add global testing
-npx balakit add mental          # always global + exclude
-npx balakit list
+npx balakit add mental --mental-tooling user --mental-data clone-exclude
+npx balakit list            # rules, skills, capability matrix
 npx balakit status
 npx balakit update
 npx balakit remove testing
-npx balakit doctor
+npx balakit doctor          # mode-aware Mental data-policy check/repair
 ```
 
-Optional global install (Linux, macOS, WSL, Windows):
+Optional global install:
 
 ```bash
 npm install -g balakit
 balakit init
 ```
 
-No agent multiselect by default — agents are **auto-detected**. Override with
-`--agents cursor,claude-code` or `--agents all`. Preview with `--dry-run`; skip
-prompts with `-y`.
+Override skills targets with `--agents cursor,claude-code` or `--agents all`.
+Preview with `--dry-run`. `-y` skips safe confirms; it **cannot** silently accept
+`tracked` or `repo-gitignore` Mental data policies.
 
-### Interactive menu
+### Guided setup
 
-`npx balakit` with no subcommand opens a terminal UI (arrow keys + Enter):
+`npx balakit` (and `init` without `-y`) walks:
 
-1. **Team kit** — project rules (`global`, `testing`, `comments`, `changelog`)
-2. **Personal layer** — global `mental` rule + skill + `.mental/` git exclude
-3. **Team kit + personal layer**
-4. **Cherry-pick** — choose individual rules and skills
-
-Use `-y` to skip confirmation prompts, or pass a subcommand directly
-(`init`, `add`, `list`, …).
+1. **Intent** — project standing rules, Mental continuity, both, or advanced cherry-pick
+2. **Tools** — detected agents as hints; confirm skills targets
+3. **Mental choices** (when selected) — tooling scope + data policy, with consequences
+4. **Review** — exact destinations → apply
 
 ## What gets installed
 
-### Team kit (`init` / project rules)
+### Project standing rules
 
 | Artifact | Role |
 | --- | --- |
-| `AGENTS.md` | Managed block — canonical standing instructions (Codex, OpenCode, Copilot, Cursor, …) |
+| `AGENTS.md` | Managed block — canonical standing instructions |
 | `CLAUDE.md` | Same managed block — Claude Code adapter |
 | `.cursor/rules/<name>.mdc` | **Only** glob-scoped rules (e.g. `seo-ai-search`) |
 
 Default team rules: `global`, `testing`, `comments`, `changelog`.
 
-### Personal layer (`init --personal` / `add mental`)
+`add` **reconciles** with the project manifest so later adds never shrink the
+managed block.
 
-| Piece | Where |
+### Mental role (`mental` rule + skill)
+
+Two independent choices:
+
+| Axis | Options |
 | --- | --- |
-| `mental` rule | `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.cursor/rules/mental.mdc` |
-| `mental` skill | Global via `npx skills add … -g` |
-| `.mental/` ignore | Machine-wide `core.excludesfile` — **never** a repo `.gitignore` |
+| **Tooling scope** | `user` (default) — `~/.claude`, `~/.codex`, `~/.cursor/rules` + skills `-g`; `project` — wiring in this repo (collaborators see it) |
+| **Data policy** | `global-exclude` (default) · `clone-exclude` (`.git/info/exclude`) · `repo-gitignore` · `tracked` (no privacy promise) |
+
+Flags: `--mental-tooling user|project` and
+`--mental-data global-exclude|clone-exclude|repo-gitignore|tracked`.
 
 The data folder `.mental/` is **per-repo** (created by the agent on first
-substantive work). Only the *wiring* is global. Project-scope install of the
-mental rule is refused — it would commit a personal pointer into shared files.
+substantive work when policy allows). Remove never deletes `.mental/` data and
+never silently removes ignore lines.
 
 ### Skills
 
@@ -91,34 +93,48 @@ npx skills add balacodeio/balakit -g
 npx skills add balacodeio/balakit --skill dissect
 ```
 
-`balakit add <skill>` runs the equivalent under the hood. The `mental` rule
-always brings the `mental` skill (pointer without procedure is useless).
+`balakit add <skill>` runs the equivalent. The `mental` rule always brings the
+`mental` skill. Skills failures exit non-zero (partial state is reported).
+
+## Capability model
+
+Balakit does **not** claim every tool is fully supported. Each entry records:
+
+- **rules confidence** — verified / optional / unknown / unsupported
+- **standing surface** — usually `AGENTS.md` (+ `CLAUDE.md` / Cursor scoped `.mdc` when required)
+- **skills** — delegated to skills.sh when a target id exists
+
+`balakit list` and `balakit status` print the matrix (`*` = detected). Detection
+is a recommendation only.
+
+| Tier | Meaning |
+| --- | --- |
+| Common | `AGENTS.md` + Agent Skills / `SKILL.md` via skills.sh |
+| Required natives | `CLAUDE.md` twin; Cursor scoped `.mdc` for globs |
+| Optional / delegated | Windsurf, Roo, Gemini CLI, Zed, Amp, Cline, Kilo, pi, … — skills via skills.sh; rules via AGENTS.md when they read it |
+| Unknown / unsupported | e.g. Aider (config-only AGENTS), Amazon Q native rules — documented, not auto-written |
 
 ## Updating & removing
 
 ```bash
 npx balakit update          # refresh everything recorded in manifests
-npx balakit remove mental   # drops wiring + skill; keeps the global exclude
-npx balakit status          # project + personal manifests, managed blocks, exclude health
+npx balakit remove mental   # drops wiring + skill; keeps data policy ignores
+npx balakit status          # manifests, managed blocks, Mental policy, matrix
 ```
 
-Ownership is tracked in `.balakit/installed.json` (project) and
-`~/.balakit/installed.json` (personal).
+Ownership: `.balakit/installed.json` (project) and `~/.balakit/installed.json`
+(user). Schema v2 records agents, surfaces, Mental tooling scope, and data
+policy. Older manifests migrate to `user` + `global-exclude` when Mental is
+present.
 
-## The `.mental/` personal knowledge layer
+## The `.mental/` continuity layer
 
-`mental` (rule + skill) teaches agents to maintain a **private, gitignored,
-per-repo continuity log** at `.mental/`. It derives current state from git, the
-latest exact handoff, and open decisions; then records only consequential
-decisions and durable facts that git cannot explain.
-
-**Git contract (non-negotiable):** `.mental/` is ignored via your **global** git
-excludes (`core.excludesfile`, typically `~/.config/git/ignore`). The CLI doctor
-owns exclude setup and repair. Agents never modify git configuration or write a
-repo `.gitignore` entry for it.
+`mental` (rule + skill) teaches agents to maintain a per-repo continuity log at
+`.mental/`. Preflight respects the **recorded data policy**: private modes
+require `git check-ignore`; tracked mode does not.
 
 ```bash
-npx balakit doctor   # verify / repair the exclude
+npx balakit doctor   # verify / repair for the recorded policy
 ```
 
 ## Rules
@@ -128,7 +144,7 @@ npx balakit doctor   # verify / repair the exclude
 | `global` | Meta-principle, dual-mode communication, simplicity ladder, repo hygiene |
 | `changelog` | Changelog maintenance (grouped Features / Fixes / Changes) |
 | `comments` | Comments and JSDoc standards |
-| `mental` | Personal `.mental/` layer — always global; auto-installs the `mental` skill |
+| `mental` | Continuity layer — choose tooling scope + data policy; bundles `mental` skill |
 | `seo-ai-search` | SEO + AI-search implementation (file-scoped → Cursor `.mdc`) |
 | `testing` | Testing philosophy |
 
@@ -144,7 +160,7 @@ npx balakit doctor   # verify / repair the exclude
 | `everything-seo` | Comprehensive SEO playbook |
 | `marketing-psychology` | Psychology for product and marketing copy |
 | `media-gen` | Fal.ai image, video, and upscale generation with dual-model ad creative workflow |
-| `mental` | Private project continuity: decisions, outcomes, and exact handoffs |
+| `mental` | Project continuity: decisions, outcomes, and exact handoffs |
 | `nlm-skill` | NotebookLM CLI (`nlm`) and MCP server expert |
 | `release-deploy` | GitHub tag releases: main→production, staging→beta; changelog-driven notes |
 | `seo-audit` | SEO audit workflow |
@@ -154,7 +170,7 @@ npx balakit doctor   # verify / repair the exclude
 
 ```text
 bin/cli.mjs                 # entry — routes to commands/
-bin/lib/                    # catalog, render, rules-install, skills-bridge, …
+bin/lib/                    # catalog, plan, capability registry, mental policy, …
 bin/commands/               # init, add, remove, status, interactive, …
 skills/<name>/SKILL.md      # source of truth (skills.sh discovery)
 rules/<name>.mdc            # source of truth for rules

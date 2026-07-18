@@ -4,10 +4,22 @@
 import * as p from "@clack/prompts";
 import { CMD, VERSION } from "../lib/pkg.mjs";
 import { loadRules, loadSkills } from "../lib/catalog.mjs";
-import { planSelection, runInstall } from "../lib/install.mjs";
+import { buildInstallPlan, runInstallPlan } from "../lib/install.mjs";
+import {
+  DEFAULT_MENTAL_TOOLING,
+  DEFAULT_MENTAL_DATA_POLICY,
+} from "../lib/mental-policy.mjs";
+import { resolveMentalPolicy } from "../lib/manifest.mjs";
 
 /**
- * @param {{ names: string[], agents?: string[], dryRun?: boolean, yes?: boolean }} opts
+ * @param {{
+ *   names: string[],
+ *   agents?: string[],
+ *   dryRun?: boolean,
+ *   yes?: boolean,
+ *   mentalTooling?: string,
+ *   mentalDataPolicy?: string,
+ * }} opts
  */
 export async function cmdAdd(opts) {
   const allRules = loadRules();
@@ -31,15 +43,37 @@ export async function cmdAdd(opts) {
     }
   }
 
+  const existing = resolveMentalPolicy();
+  const wantsMental =
+    ruleNames.includes("mental") || skillNames.includes("mental");
+  const mentalTooling =
+    opts.mentalTooling ??
+    (existing.hasMental ? existing.tooling : DEFAULT_MENTAL_TOOLING);
+  const mentalDataPolicy =
+    opts.mentalDataPolicy ??
+    (existing.hasMental || wantsMental ? existing.dataPolicy || DEFAULT_MENTAL_DATA_POLICY : DEFAULT_MENTAL_DATA_POLICY);
+
   p.intro(`${CMD} v${VERSION} — add${opts.dryRun ? "  [dry-run]" : ""}`);
-  const plan = planSelection(ruleNames, skillNames, allRules);
-  const result = await runInstall({
-    ...plan,
+
+  const plan = buildInstallPlan({
+    ruleNames,
+    skillNames,
+    allRules,
     agents: opts.agents,
+    mentalTooling: wantsMental || existing.hasMental ? mentalTooling : DEFAULT_MENTAL_TOOLING,
+    mentalDataPolicy,
+    reconcile: true,
+  });
+
+  const result = await runInstallPlan(plan, {
     dryRun: opts.dryRun,
     yes: opts.yes,
   });
   if (result?.cancelled) return 1;
+  if (!result?.ok) {
+    p.outro("Finished with errors — see above (partial install).");
+    return 1;
+  }
   p.outro(opts.dryRun ? "Dry-run complete." : `Done. Update: npx ${CMD} update`);
   return 0;
 }

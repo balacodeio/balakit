@@ -95,6 +95,7 @@ export function checkMentalExcluded({ home = homedir() } = {}) {
 
 /**
  * Verify (and repair) the `.mental/` global git-exclude.
+ * Prefer `runPolicyDoctor` from mental-policy.mjs for mode-aware checks.
  * @returns {number} Process exit code (0 = secured).
  */
 export function runDoctor() {

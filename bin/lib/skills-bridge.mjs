@@ -1,9 +1,10 @@
 /**
- * Delegate skill install/remove/update to skills.sh.
+ * Delegate skill install/remove/update to skills.sh (vercel-labs/skills).
+ * Balakit does not own per-agent skill path maps.
  */
 import { spawnSync } from "node:child_process";
 import { REPO } from "./pkg.mjs";
-import { AGENTS } from "./agents.mjs";
+import { getCapability } from "./agents.mjs";
 
 /**
  * Build an `npx skills add` command.
@@ -13,7 +14,7 @@ import { AGENTS } from "./agents.mjs";
  */
 export function skillsAddCommand(skillNames, agentIds, scope) {
   const ids = agentIds
-    .map((a) => AGENTS.find((x) => x.id === a)?.skillsShId)
+    .map((a) => getCapability(a)?.skillsShId)
     .filter(Boolean);
   return [
     "npx -y skills add",

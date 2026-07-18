@@ -1,8 +1,9 @@
 /**
  * `balakit remove <names...>` — remove owned kit pieces.
- * Removing mental leaves the global git exclude in place (other repos may have data).
+ * Never silently removes global excludes or `.mental/` data.
  */
 import * as p from "@clack/prompts";
+import { join } from "node:path";
 import { CMD, VERSION, PERSONAL_RULES } from "../lib/pkg.mjs";
 import { loadRules, loadSkills } from "../lib/catalog.mjs";
 import {
@@ -16,7 +17,10 @@ import {
   recordRemove,
   projectManifestPath,
   globalManifestPath,
+  isCorruptManifest,
+  resolveMentalPolicy,
 } from "../lib/manifest.mjs";
+import { hasManagedBlock } from "../lib/render.mjs";
 
 /**
  * @param {{ names: string[], dryRun?: boolean, yes?: boolean }} opts
@@ -45,25 +49,52 @@ export async function cmdRemove(opts) {
 
   p.intro(`${CMD} v${VERSION} — remove${opts.dryRun ? "  [dry-run]" : ""}`);
 
+  const policy = resolveMentalPolicy();
+  const mentalTooling = policy.tooling || "user";
   const selected = allRules.filter((r) => ruleNames.includes(r.name));
-  const { personal, team } = partitionRules(selected);
+  const { personal, team } = partitionRules(selected, { mentalTooling });
 
   const proj = readManifest(projectManifestPath());
   const glob = readManifest(globalManifestPath());
+  const cwd = process.cwd();
+
+  const liveTeamBlock =
+    hasManagedBlock(join(cwd, "AGENTS.md")) || hasManagedBlock(join(cwd, "CLAUDE.md"));
 
   const remainingTeam = allRules.filter(
-    (r) => proj.rules.includes(r.name) && !ruleNames.includes(r.name) && !PERSONAL_RULES.includes(r.name),
+    (r) =>
+      proj.rules.includes(r.name) &&
+      !ruleNames.includes(r.name) &&
+      (mentalTooling === "project" || !PERSONAL_RULES.includes(r.name)),
   );
+
+  // Refuse wipe when live blocks exist but ownership ledger cannot justify it
+  if (team.length && remainingTeam.length === 0 && liveTeamBlock) {
+    const manifestKnowsTeam = team.every((r) => proj.rules.includes(r.name));
+    if (isCorruptManifest(proj) || !proj.rules.length || !manifestKnowsTeam) {
+      p.log.error(
+        "Refusing to wipe AGENTS.md/CLAUDE.md managed blocks: manifest is missing, corrupt, or out of sync with live files.\n" +
+          "Fix with `balakit status`, restore `.balakit/installed.json`, or remove the managed block markers by hand.",
+      );
+      p.outro("Aborted.");
+      return 1;
+    }
+  }
   const remainingPersonal = allRules.filter(
-    (r) => glob.rules.includes(r.name) && !ruleNames.includes(r.name) && PERSONAL_RULES.includes(r.name),
+    (r) =>
+      glob.rules.includes(r.name) &&
+      !ruleNames.includes(r.name) &&
+      PERSONAL_RULES.includes(r.name),
   );
 
   const lines = [];
-  if (team.length) lines.push(`Team rules: ${team.map((r) => r.name).join(", ")}`);
-  if (personal.length) lines.push(`Personal rules: ${personal.map((r) => r.name).join(", ")}`);
+  if (team.length) lines.push(`Project rules: ${team.map((r) => r.name).join(", ")}`);
+  if (personal.length) lines.push(`User-wide rules: ${personal.map((r) => r.name).join(", ")}`);
   if (skillNames.length) lines.push(`Skills: ${skillNames.join(", ")}`);
-  if (personal.length || skillNames.includes("mental")) {
-    lines.push("(global .mental/ exclude is kept — other repos may still use it)");
+  if (personal.length || skillNames.includes("mental") || team.some((r) => r.name === "mental")) {
+    lines.push(
+      `(Mental data policy "${policy.dataPolicy}" is kept — excludes are never auto-removed; .mental/ data is never deleted)`,
+    );
   }
   p.note(lines.join("\n") || "Nothing to remove", "Remove");
 
@@ -74,6 +105,8 @@ export async function cmdRemove(opts) {
       return 1;
     }
   }
+
+  let failed = false;
 
   if (team.length) {
     const r = removeTeamRules(team, remainingTeam, { dryRun: opts.dryRun });
@@ -91,6 +124,7 @@ export async function cmdRemove(opts) {
 
   const mentalSkills = skillNames.filter((s) => s === "mental");
   const otherSkills = skillNames.filter((s) => s !== "mental");
+  const mentalSkillScope = mentalTooling === "project" ? "project" : "global";
 
   const removeSkills = (names, scope) => {
     if (!names.length) return;
@@ -101,8 +135,9 @@ export async function cmdRemove(opts) {
       p.log.step(`Removing skills via skills.sh:\n${cmd}`);
       const result = runSkillsCmd(cmd);
       if (!result.ok) {
-        p.log.warn("skills.sh remove did not complete. Try manually:");
+        p.log.error("skills.sh remove did not complete. Try manually:");
         p.log.message(cmd);
+        failed = true;
       } else {
         recordRemove(scope, { skills: names });
       }
@@ -110,8 +145,8 @@ export async function cmdRemove(opts) {
   };
 
   removeSkills(otherSkills, "project");
-  removeSkills(mentalSkills, "global");
+  removeSkills(mentalSkills, mentalSkillScope);
 
-  p.outro(opts.dryRun ? "Dry-run complete." : "Done.");
-  return 0;
+  p.outro(opts.dryRun ? "Dry-run complete." : failed ? "Finished with errors." : "Done.");
+  return failed ? 1 : 0;
 }

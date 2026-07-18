@@ -1,15 +1,16 @@
 ---
 name: mental
 description: >-
-  Maintains a private, gitignored project-continuity log in each repository.
-  Reconstructs where work stands from git, the latest journal handoff, and open
-  decisions; records why consequential decisions were made; and leaves an exact
-  resume point after substantive work. Use when starting or finishing
-  non-trivial repository work, answering project-orientation questions, or
-  recording a decision that git cannot explain.
+  Maintains a project-continuity log in each repository (private by default,
+  or tracked when the installed Mental data policy says so). Reconstructs where
+  work stands from git, the latest journal handoff, and open decisions; records
+  why consequential decisions were made; and leaves an exact resume point after
+  substantive work. Use when starting or finishing non-trivial repository work,
+  answering project-orientation questions, or recording a decision that git
+  cannot explain.
 user-invocable: true
 disable-model-invocation: false
-version: "2.0.0"
+version: "2.1.0"
 author: "Ali Farahat"
 tags: ["continuity", "journal", "decisions", "orientation", "handoff"]
 when_to_use: |
@@ -27,10 +28,10 @@ when_to_use: |
   - The information is cross-repository, personal, or secret.
 ---
 
-# `.mental/` — Private Project Continuity
+# `.mental/` — Project Continuity
 
 > **Leading words:** derive, do not maintain; task boundary; exact handoff;
-> decisions explain git; private, not secret; optional, never required.
+> decisions explain git; policy-aware privacy; optional, never required.
 
 `.mental/` exists to make a later human or agent session continue without
 reconstructing intent from chat history. Git records what changed. `.mental/`
@@ -77,16 +78,24 @@ Templates: [references/templates.md](references/templates.md).
 
 ### 1. Preflight
 
-Before creating `.mental/`, run:
+Read `mentalDataPolicy` from `.balakit/installed.json` or
+`~/.balakit/installed.json` (default `global-exclude` when unset).
+
+**Private policies** (`global-exclude`, `clone-exclude`, `repo-gitignore`):
+before creating `.mental/`, run:
 
 ```text
 git check-ignore -q -- .mental/probe
 ```
 
 If it succeeds, create the minimal skeleton from the templates. If it fails, do
-not create `.mental/` and do not modify git configuration or `.gitignore`.
-Tell the user to run `npx balakit doctor`, then continue the requested work
+not create `.mental/` and do not modify git configuration, `.gitignore`, or
+`.git/info/exclude`. Tell the user to run `npx balakit doctor`, then continue
 without the continuity layer.
+
+**Tracked policy** (`tracked`): do not require check-ignore success. Warn once
+that there is no privacy promise, then create the skeleton if the user still
+wants continuity. Never store secrets.
 
 Skip creation for trivial or read-only turns.
 
@@ -149,13 +158,17 @@ Separate observed facts from inference. Do not recite the entire journal.
 
 ## Privacy and safety
 
-- `.mental/` is per repository; installation of the rule and skill is global.
-- Never stage, commit, publish, attach, or quote `.mental/` contents in PRs,
-  issues, release notes, code comments, or external messages.
+- `.mental/` is per repository. Tooling scope (user-wide vs project) and data
+  policy are chosen at install time and recorded in the balakit manifest.
+- Under private policies: never stage, commit, publish, attach, or quote
+  `.mental/` contents in PRs, issues, release notes, code comments, or external
+  messages.
+- Under tracked policy: `.mental/` may be shared in git; still never store
+  secrets; summarize carefully for public remotes.
 - It is acceptable to summarize relevant orientation to the user in the current
-  private conversation.
-- Never alter `.gitignore` or global git configuration. `balakit doctor` owns
-  exclude setup and repair.
-- Never store secrets, even though the folder is ignored.
+  conversation.
+- Never alter `.gitignore`, `.git/info/exclude`, or global git configuration.
+  `balakit doctor` owns ignore setup and repair for the recorded policy.
+- Never store secrets.
 - Never delete existing concepts during migration or cleanup without explicit
   user approval.

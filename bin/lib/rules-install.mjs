@@ -5,9 +5,9 @@
  *   - Always-on → managed block in AGENTS.md + CLAUDE.md
  *   - Scoped (globs) → `.cursor/rules/<name>.mdc` (+ listed in the managed block)
  *
- * Personal (mental) rules — always user/global:
- *   - ~/.claude/CLAUDE.md + ~/.codex/AGENTS.md managed blocks
- *   - ~/.cursor/rules/mental.mdc
+ * Mental rules follow tooling scope:
+ *   - user → ~/.claude/CLAUDE.md + ~/.codex/AGENTS.md + ~/.cursor/rules/
+ *   - project → included in AGENTS.md / CLAUDE.md (collaborators see the wiring)
  */
 import { writeFileSync, mkdirSync, unlinkSync, existsSync } from "node:fs";
 import { join, sep } from "node:path";
@@ -16,23 +16,40 @@ import { PERSONAL_RULES } from "./pkg.mjs";
 import { mergeManaged, removeManaged, renderRulesBlock, hasManagedBlock, rel } from "./render.mjs";
 
 /**
- * Split a rule list into personal vs team.
+ * Split a rule list into personal vs team by name list (defaults to PERSONAL_RULES).
+ * When mental tooling is project-scoped, mental is treated as team.
  * @param {Array<{name: string}>} rules
+ * @param {{ mentalTooling?: "user"|"project" }} [opts]
  */
-export function partitionRules(rules) {
-  const personal = rules.filter((r) => PERSONAL_RULES.includes(r.name));
-  const team = rules.filter((r) => !PERSONAL_RULES.includes(r.name));
+export function partitionRules(rules, { mentalTooling = "user" } = {}) {
+  const personalNames = new Set(
+    mentalTooling === "project" ? [] : PERSONAL_RULES,
+  );
+  const personal = rules.filter((r) => personalNames.has(r.name));
+  const team = rules.filter((r) => !personalNames.has(r.name));
   return { personal, team };
 }
 
 /**
+ * Union rule objects by name (catalog order preserved via catalog list).
+ * @param {Array<{name: string}>} catalog
+ * @param {string[]} names
+ */
+export function rulesByNames(catalog, names) {
+  const set = new Set(names);
+  return catalog.filter((r) => set.has(r.name));
+}
+
+/**
  * Install team (project-scoped) rules AGENTS.md-first.
- * @returns {{ written: string[], notes: string[] }}
+ * Pass the **full desired** team rule set (already reconciled with manifest).
+ * @returns {{ written: string[], notes: string[], surfaces: string[] }}
  */
 export function installTeamRules(rules, { cwd = process.cwd(), dryRun = false } = {}) {
   const written = [];
   const notes = [];
-  if (!rules.length) return { written, notes };
+  const surfaces = [];
+  if (!rules.length) return { written, notes, surfaces };
 
   const always = rules.filter((r) => r.always);
   const scoped = rules.filter((r) => !r.always);
@@ -45,6 +62,7 @@ export function installTeamRules(rules, { cwd = process.cwd(), dryRun = false } 
     mergeManaged(claudeMd, block);
   }
   written.push(rel(agentsMd), rel(claudeMd));
+  surfaces.push("AGENTS.md", "CLAUDE.md");
 
   if (scoped.length) {
     const dir = join(cwd, ".cursor", "rules");
@@ -53,6 +71,7 @@ export function installTeamRules(rules, { cwd = process.cwd(), dryRun = false } 
       const dest = join(dir, `${r.name}.mdc`);
       if (!dryRun) writeFileSync(dest, r.raw);
       written.push(rel(dest));
+      surfaces.push(`.cursor/rules/${r.name}.mdc`);
     }
     notes.push(
       "Scoped rules written to .cursor/rules/*.mdc (Cursor globs). Also summarized in AGENTS.md / CLAUDE.md.",
@@ -63,17 +82,18 @@ export function installTeamRules(rules, { cwd = process.cwd(), dryRun = false } 
     notes.push("Standing rules live in AGENTS.md + CLAUDE.md (Cursor reads AGENTS.md natively).");
   }
 
-  return { written, notes };
+  return { written, notes, surfaces };
 }
 
 /**
  * Install personal-layer rules at user/global scope.
- * @returns {{ written: string[], notes: string[] }}
+ * @returns {{ written: string[], notes: string[], surfaces: string[] }}
  */
 export function installPersonalRules(rules, { home = homedir(), dryRun = false } = {}) {
   const written = [];
   const notes = [];
-  if (!rules.length) return { written, notes };
+  const surfaces = [];
+  if (!rules.length) return { written, notes, surfaces };
 
   const block = renderRulesBlock(rules, { consumer: true });
   const targets = [
@@ -84,6 +104,7 @@ export function installPersonalRules(rules, { home = homedir(), dryRun = false }
     if (!dryRun) mergeManaged(file, block);
     written.push(file);
   }
+  surfaces.push("~/.claude/CLAUDE.md", "~/.codex/AGENTS.md");
 
   const cursorDir = join(home, ".cursor", "rules");
   if (!dryRun) mkdirSync(cursorDir, { recursive: true });
@@ -91,18 +112,22 @@ export function installPersonalRules(rules, { home = homedir(), dryRun = false }
     const dest = join(cursorDir, `${r.name}.mdc`);
     if (!dryRun) writeFileSync(dest, r.raw);
     written.push(dest);
+    surfaces.push(`~/.cursor/rules/${r.name}.mdc`);
   }
   notes.push(
     "Personal rules installed globally (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.cursor/rules/). Cursor may skip ~/.cursor/rules in workspace-less Agent sessions (known Cursor bug).",
   );
 
-  return { written, notes };
+  return { written, notes, surfaces };
 }
 
 /**
  * Remove team rules from the project (managed blocks + scoped mdc files).
  * When `remaining` is non-empty, rewrites the managed block to those rules;
  * otherwise removes the managed blocks entirely.
+ *
+ * Callers must refuse wipe when the manifest is corrupt/empty but a live
+ * managed block still exists (see remove command).
  */
 export function removeTeamRules(toRemove, remaining, { cwd = process.cwd(), dryRun = false } = {}) {
   const written = [];
@@ -183,5 +208,14 @@ export function describeTeamTargets(cwd = process.cwd()) {
     `AGENTS.md  → ${rel(join(cwd, "AGENTS.md"))} (managed block)`,
     `CLAUDE.md  → ${rel(join(cwd, "CLAUDE.md"))} (managed block)`,
     `Cursor     → ${rel(join(cwd, ".cursor", "rules"))}${sep}<scoped>.mdc (globs only)`,
+  ];
+}
+
+/** Describe personal destinations for review. */
+export function describePersonalTargets() {
+  return [
+    "~/.claude/CLAUDE.md (managed block)",
+    "~/.codex/AGENTS.md (managed block)",
+    "~/.cursor/rules/<name>.mdc",
   ];
 }

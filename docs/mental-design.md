@@ -1,9 +1,13 @@
-# `.mental` — Design Spec
+# `.mental` — Design Spec (historical)
 
-> **Status:** Design **locked** 2026-07-07. Build **held** (deferred until explicitly greenlit).
-> **Target:** balakit **v1.4.0**.
-> This document is the build reference. It captures the agreed design and the reasoning
-> behind each decision so the build doesn't re-litigate settled forks.
+> **Status:** **Superseded** for shipping behavior. Mental 2.0 (v1.8.2) narrowed the
+> default bundle; the CLI capability redesign adds explicit tooling scope and data-policy
+> modes (`user|project` × `global-exclude|clone-exclude|repo-gitignore|tracked`).
+> Live contract: [`skills/mental/SKILL.md`](../skills/mental/SKILL.md),
+> [`rules/mental.mdc`](../rules/mental.mdc), [`README.md`](../README.md).
+>
+> Below is the original 2026-07-07 design record (locked for v1.4.0). Keep for rationale;
+> do not treat §7–§8 ignore/fan-out decisions as current product law.
 
 ---
 

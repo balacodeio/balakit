@@ -2,9 +2,9 @@
 /**
  * balakit — opinionated rules & skills kit installer.
  *
- * Rules install AGENTS.md-first (project) or to user config (personal/mental).
- * Skills are delegated to skills.sh. Mental always enables the machine-wide
- * `.mental/` git exclude (never a repo `.gitignore`).
+ * Rules install AGENTS.md-first (project) or to user config (Mental user-wide).
+ * Skills are delegated to skills.sh. Mental data policy is chosen at install
+ * (global exclude, clone exclude, repo gitignore, or tracked).
  */
 import { VERSION } from "./lib/pkg.mjs";
 import { isCliEntry } from "./lib/entry.mjs";
@@ -24,12 +24,35 @@ export {
   expandHome,
   runDoctor,
 } from "./lib/mental-exclude.mjs";
+export {
+  applyDataPolicy,
+  checkDataPolicy,
+  runPolicyDoctor,
+  DEFAULT_MENTAL_DATA_POLICY,
+  DEFAULT_MENTAL_TOOLING,
+} from "./lib/mental-policy.mjs";
 export { renderRulesBlock, renderRepoStandingDocs, mergeManaged, removeManaged, demote } from "./lib/render.mjs";
 export { parseRule, skillDescription, bundledSkillsFor, loadRules, loadSkills } from "./lib/catalog.mjs";
 export { skillsCommand, skillsAddCommand, skillsRemoveCommand } from "./lib/skills-bridge.mjs";
 export { installTeamRules, installPersonalRules, partitionRules } from "./lib/rules-install.mjs";
-export { detectAgents, AGENTS } from "./lib/agents.mjs";
-export { RULE_BUNDLED_SKILLS, PERSONAL_RULES, TEAM_INIT_RULES, NAME, CMD, REPO } from "./lib/pkg.mjs";
+export {
+  detectAgents,
+  AGENTS,
+  formatCapabilityMatrix,
+  getCapability,
+  DEFAULT_AGENT_IDS,
+} from "./lib/agents.mjs";
+export {
+  RULE_BUNDLED_SKILLS,
+  PERSONAL_RULES,
+  TEAM_INIT_RULES,
+  NAME,
+  CMD,
+  REPO,
+  MANIFEST_SCHEMA,
+  BEGIN,
+  END,
+} from "./lib/pkg.mjs";
 export { parseArgv } from "./lib/args.mjs";
 export {
   readManifest,
@@ -37,7 +60,10 @@ export {
   recordRemove,
   projectManifestPath,
   globalManifestPath,
+  migrateManifest,
+  resolveMentalPolicy,
 } from "./lib/manifest.mjs";
+export { buildInstallPlan, runInstallPlan, planSelection } from "./lib/install.mjs";
 
 async function main() {
   let args;
@@ -53,6 +79,8 @@ async function main() {
     agents: args.agents,
     dryRun: args.dryRun,
     yes: args.yes,
+    mentalTooling: args.mentalTooling,
+    mentalDataPolicy: args.mentalDataPolicy,
   };
 
   let code = 0;
@@ -83,13 +111,17 @@ async function main() {
       code = await cmdAdd({ ...common, names: args.names });
       break;
     case "remove":
-      code = await cmdRemove({ ...common, names: args.names });
+      code = await cmdRemove({ dryRun: args.dryRun, yes: args.yes, names: args.names });
       break;
     case "update":
-      code = await cmdUpdate(common);
+      code = await cmdUpdate({ dryRun: args.dryRun, yes: args.yes, agents: args.agents });
       break;
     case null:
-      code = await cmdInteractive(common);
+      code = await cmdInteractive({
+        ...common,
+        personal: args.personal,
+        withPersonal: args.withPersonal,
+      });
       break;
     default:
       console.error(`Unknown command: ${args.command}`);

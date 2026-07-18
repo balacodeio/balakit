@@ -7,8 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.10.0]
+
 ### Features
+- **Capability-aware guided CLI** — plan-first setup (`npx balakit` / `init`) with intent → tools → Mental choices → review → apply; capability matrix separates verified rules, delegated skills.sh targets, and optional/unknown tools.
+- **Flexible Mental role** — independent `--mental-tooling user|project` and `--mental-data global-exclude|clone-exclude|repo-gitignore|tracked`; mode-aware `doctor`; rule + skill preflight follows the recorded policy.
+- **Manifest schema v2** — records agents, surfaces, Mental tooling scope, and data policy; v1 manifests migrate to user-wide + global-exclude when Mental is present.
 - **New skill: `release-deploy`** — GitHub tag + Release workflow for beta (`staging`) and production (`main`), with first-time project interview, changelog-sourced notes, and Cloudflare/desktop platform refs.
+
+### Fixes
+- **`add` no longer shrinks AGENTS.md** — installs reconcile the desired rule set with the project manifest before rewriting managed blocks.
+- **Safe `remove`** — refuses to wipe live managed blocks when the ownership manifest is missing, corrupt, or out of sync.
+- **Skills failures exit non-zero** — partial installs are reported instead of printing success.
+
+### Changes
+- Interactive Team/Personal/Both/Cherry-pick presets replaced by guided intent + Advanced cherry-pick; `--list` / `--doctor` flag aliases removed (use `list` / `doctor` commands).
+- `--personal` / `--with-personal` only apply to guided setup or `init` (rejected elsewhere).
+- `-y` cannot silently accept `tracked` or `repo-gitignore` Mental data policies.
 
 ## [v1.9.1]
 

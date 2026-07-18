@@ -1,14 +1,38 @@
 /**
- * Shared install orchestration for init / add / interactive.
+ * Plan-first install orchestration for init / add / interactive / update.
  */
 import * as p from "@clack/prompts";
 import { PERSONAL_RULES } from "./pkg.mjs";
 import { bundledSkillsFor } from "./catalog.mjs";
-import { detectAgents, AGENTS } from "./agents.mjs";
-import { installTeamRules, installPersonalRules, describeTeamTargets, partitionRules } from "./rules-install.mjs";
+import {
+  detectAgents,
+  skillsCapableAgents,
+  skillsUnsupportedAgents,
+  getCapability,
+} from "./agents.mjs";
+import {
+  installTeamRules,
+  installPersonalRules,
+  describeTeamTargets,
+  describePersonalTargets,
+  partitionRules,
+  rulesByNames,
+} from "./rules-install.mjs";
 import { skillsAddCommand, runSkillsCmd } from "./skills-bridge.mjs";
-import { ensureMentalExcluded, checkMentalExcluded } from "./mental-exclude.mjs";
-import { recordInstall } from "./manifest.mjs";
+import {
+  applyDataPolicy,
+  describeDataPolicy,
+  describeToolingScope,
+  requiresHardConfirm,
+  DEFAULT_MENTAL_TOOLING,
+  DEFAULT_MENTAL_DATA_POLICY,
+} from "./mental-policy.mjs";
+import {
+  recordInstall,
+  readManifest,
+  projectManifestPath,
+  globalManifestPath,
+} from "./manifest.mjs";
 
 /**
  * Resolve agent ids: explicit flag, else auto-detect.
@@ -23,21 +47,320 @@ export function resolveAgents(agents) {
  * @param {string[]} ruleNames
  * @param {string[]} skillNames
  * @param {Array} allRules
+ * @param {{ mentalTooling?: "user"|"project" }} [opts]
  */
-export function planSelection(ruleNames, skillNames, allRules) {
+export function planSelection(ruleNames, skillNames, allRules, opts = {}) {
+  const mentalTooling = opts.mentalTooling ?? DEFAULT_MENTAL_TOOLING;
   const bundled = bundledSkillsFor(ruleNames).filter((s) => !skillNames.includes(s));
   const skills = [...skillNames, ...bundled];
   const selectedRules = allRules.filter((r) => ruleNames.includes(r.name));
-  const { personal, team } = partitionRules(selectedRules);
-  // mental skill alone still triggers the personal stack (exclude + skill -g)
+  const { personal, team } = partitionRules(selectedRules, { mentalTooling });
   const wantsMental =
-    personal.length > 0 || skills.includes("mental") || ruleNames.includes("mental");
-  return { selectedRules, personal, team, skills, bundled, wantsMental };
+    personal.length > 0 ||
+    team.some((r) => PERSONAL_RULES.includes(r.name)) ||
+    skills.includes("mental") ||
+    ruleNames.includes("mental");
+  return { selectedRules, personal, team, skills, bundled, wantsMental, mentalTooling };
 }
 
 /**
- * Execute an install plan.
- * @param {object} opts
+ * Build a first-class InstallPlan (no mutation).
+ * Reconciles team rules with the existing project manifest so add never shrinks
+ * the managed block.
+ *
+ * @param {object} input
+ * @returns {object} InstallPlan
+ */
+export function buildInstallPlan({
+  ruleNames = [],
+  skillNames = [],
+  allRules,
+  agents,
+  mentalTooling = DEFAULT_MENTAL_TOOLING,
+  mentalDataPolicy = DEFAULT_MENTAL_DATA_POLICY,
+  cwd = process.cwd(),
+  home,
+  reconcile = true,
+}) {
+  const agentIds = resolveAgents(agents);
+  let names = [...ruleNames];
+
+  if (reconcile) {
+    const proj = readManifest(projectManifestPath(cwd));
+    // Union project team rules so add cannot truncate AGENTS.md
+    const existingTeam = proj.rules.filter(
+      (n) => mentalTooling === "project" || !PERSONAL_RULES.includes(n),
+    );
+    names = [...new Set([...existingTeam, ...names])];
+    // Re-install personal rules only when this plan touches Mental
+    const touchesMental =
+      names.includes("mental") ||
+      ruleNames.includes("mental") ||
+      skillNames.includes("mental");
+    if (touchesMental && mentalTooling === "user") {
+      const glob = home
+        ? readManifest(globalManifestPath(home))
+        : readManifest(globalManifestPath());
+      const existingPersonal = glob.rules.filter((n) => PERSONAL_RULES.includes(n));
+      names = [...new Set([...names, ...existingPersonal])];
+    }
+  }
+
+  // Selecting mental implies its name is present
+  if (
+    skillNames.includes("mental") ||
+    ruleNames.includes("mental") ||
+    names.includes("mental")
+  ) {
+    names = [...new Set([...names, "mental"])];
+  }
+
+  const selection = planSelection(names, skillNames, allRules, { mentalTooling });
+  const surfaces = [];
+  if (selection.team.length) surfaces.push("AGENTS.md", "CLAUDE.md");
+  if (selection.team.some((r) => !r.always)) surfaces.push(".cursor/rules/*.mdc");
+  if (selection.personal.length) {
+    surfaces.push("~/.claude/CLAUDE.md", "~/.codex/AGENTS.md", "~/.cursor/rules/*.mdc");
+  }
+
+  return {
+    ...selection,
+    agentIds,
+    mentalTooling,
+    mentalDataPolicy,
+    surfaces,
+    ruleNames: names,
+  };
+}
+
+/**
+ * Format review lines for an InstallPlan.
+ * @param {object} plan
+ * @param {{ dryRun?: boolean }} [opts]
+ */
+export function formatPlanReview(plan, { dryRun = false } = {}) {
+  const lines = [];
+  if (plan.team.length) {
+    lines.push(`Team rules (project): ${plan.team.map((r) => r.name).join(", ")}`);
+  }
+  if (plan.personal.length) {
+    lines.push(`Personal rules (user-wide): ${plan.personal.map((r) => r.name).join(", ")}`);
+  }
+  if (plan.wantsMental) {
+    lines.push(`Mental tooling: ${plan.mentalTooling} — ${describeToolingScope(plan.mentalTooling)}`);
+    lines.push(
+      `Mental data: ${plan.mentalDataPolicy} — ${describeDataPolicy(plan.mentalDataPolicy)}`,
+    );
+  }
+  if (plan.skills.length) {
+    const label = (s) => (plan.bundled.includes(s) ? `${s} (bundled)` : s);
+    const mentalSkills = plan.skills.filter((s) => s === "mental");
+    const otherSkills = plan.skills.filter((s) => s !== "mental");
+    if (otherSkills.length) lines.push(`Skills (project): ${otherSkills.map(label).join(", ")}`);
+    if (mentalSkills.length) {
+      const scope = plan.mentalTooling === "project" ? "project" : "global";
+      lines.push(`Skills (${scope}): ${mentalSkills.map(label).join(", ")}`);
+    }
+  }
+  lines.push(`Tools (skills targets): ${plan.agentIds.join(", ")}`);
+  const unsupported = skillsUnsupportedAgents(plan.agentIds);
+  if (unsupported.length) {
+    lines.push(`(no skills.sh target — rules-only): ${unsupported.join(", ")}`);
+  }
+  if (plan.team.length) {
+    lines.push("", "Team destinations:");
+    for (const line of describeTeamTargets()) lines.push(`  ${line}`);
+  }
+  if (plan.personal.length) {
+    lines.push("", "Personal destinations:");
+    for (const line of describePersonalTargets()) lines.push(`  ${line}`);
+  }
+  if (dryRun) lines.unshift("[dry-run]");
+  return lines;
+}
+
+/**
+ * Execute an InstallPlan. No mutation before review/confirm.
+ * @returns {Promise<{ cancelled: boolean, ok: boolean, agents?: string[], partial?: boolean }>}
+ */
+export async function runInstallPlan(plan, { dryRun = false, yes = false, review = true } = {}) {
+  if (review) {
+    p.note(formatPlanReview(plan, { dryRun }).join("\n"), dryRun ? "Review (dry-run)" : "Review");
+
+    if (plan.wantsMental && requiresHardConfirm(plan.mentalDataPolicy)) {
+      if (yes) {
+        p.log.error(
+          `Data policy "${plan.mentalDataPolicy}" requires an interactive confirm and cannot be used with -y. Re-run without -y, or pass an explicit non-consequential policy.`,
+        );
+        return { cancelled: true, ok: false };
+      }
+      const warn = await p.confirm({
+        message:
+          plan.mentalDataPolicy === "tracked"
+            ? "Tracked Mental has NO privacy promise. Secrets/history may enter git. Continue?"
+            : "Repo .gitignore will record a personal-privacy convention in shared history. Continue?",
+      });
+      if (p.isCancel(warn) || !warn) {
+        p.cancel("Cancelled.");
+        return { cancelled: true, ok: false };
+      }
+    } else if (plan.wantsMental && plan.mentalDataPolicy === "global-exclude" && !yes && !dryRun) {
+      const warn = await p.confirm({
+        message:
+          "This may set/append your machine-wide git excludes (core.excludesfile) for ALL repos. Continue?",
+      });
+      if (p.isCancel(warn) || !warn) {
+        p.cancel("Cancelled.");
+        return { cancelled: true, ok: false };
+      }
+    }
+
+    if (!yes && !dryRun) {
+      const go = await p.confirm({ message: "Install now?" });
+      if (p.isCancel(go) || !go) {
+        p.cancel("Cancelled.");
+        return { cancelled: true, ok: false };
+      }
+    }
+  }
+
+  const notes = [];
+  let skillsFailed = false;
+  const agentIds = plan.agentIds;
+
+  if (plan.team.length) {
+    const s = p.spinner();
+    s.start(dryRun ? "Resolving team rule targets" : "Installing team rules");
+    // Full desired set already reconciled in buildInstallPlan
+    const r = installTeamRules(plan.team, { dryRun });
+    s.stop(
+      dryRun
+        ? `Would write ${r.written.length} file(s)`
+        : `Team rules installed (${r.written.length} file(s))`,
+    );
+    if (r.written.length) p.note(r.written.join("\n"), dryRun ? "Would write" : "Wrote");
+    notes.push(...r.notes);
+    if (!dryRun) {
+      recordInstall("project", {
+        rules: plan.team.map((x) => x.name),
+        agents: agentIds,
+        surfaces: r.surfaces,
+        mentalTooling: plan.wantsMental && plan.mentalTooling === "project" ? plan.mentalTooling : undefined,
+        mentalDataPolicy:
+          plan.wantsMental && plan.mentalTooling === "project" ? plan.mentalDataPolicy : undefined,
+      });
+    }
+  }
+
+  if (plan.personal.length || (plan.wantsMental && plan.mentalTooling === "user")) {
+    const personalRules = plan.personal;
+    if (personalRules.length) {
+      const s = p.spinner();
+      s.start(dryRun ? "Resolving personal rule targets" : "Installing personal rules (user-wide)");
+      const r = installPersonalRules(personalRules, { dryRun });
+      s.stop(
+        dryRun
+          ? `Would write ${r.written.length} file(s)`
+          : `Personal rules installed (${r.written.length} file(s))`,
+      );
+      if (r.written.length) p.note(r.written.join("\n"), dryRun ? "Would write" : "Wrote");
+      notes.push(...r.notes);
+      if (!dryRun) {
+        recordInstall("global", {
+          rules: personalRules.map((x) => x.name),
+          agents: agentIds,
+          surfaces: r.surfaces,
+          mentalTooling: plan.mentalTooling,
+          mentalDataPolicy: plan.mentalDataPolicy,
+        });
+      }
+    } else if (plan.wantsMental && !dryRun) {
+      // skill-only mental still records policy on global manifest
+      recordInstall("global", {
+        mentalTooling: plan.mentalTooling,
+        mentalDataPolicy: plan.mentalDataPolicy,
+      });
+    }
+  }
+
+  if (plan.wantsMental) {
+    if (dryRun) {
+      p.log.step(`Would apply Mental data policy: ${plan.mentalDataPolicy}`);
+    } else {
+      const ex = applyDataPolicy(plan.mentalDataPolicy);
+      if (!ex.ok) {
+        p.log.warn(
+          `Could not apply data policy (${ex.reason || "unknown"}). Run \`npx balakit doctor\` when ready.`,
+        );
+      } else if (ex.note) {
+        p.log.warn(ex.note);
+      } else if (plan.mentalDataPolicy === "global-exclude") {
+        p.log.step(
+          `${ex.appended ? "Secured" : "Confirmed"} .mental/ in global git excludes → ${ex.file}${ex.created ? " (core.excludesfile wired)" : ""}`,
+        );
+      } else if (ex.file) {
+        p.log.step(`${ex.appended ? "Wrote" : "Confirmed"} ${ex.file}`);
+      } else {
+        p.log.step(`Mental data policy: ${plan.mentalDataPolicy}`);
+      }
+
+      // Always persist policy on the appropriate manifest
+      if (plan.mentalTooling === "project") {
+        recordInstall("project", {
+          mentalTooling: plan.mentalTooling,
+          mentalDataPolicy: plan.mentalDataPolicy,
+        });
+      }
+    }
+  }
+
+  if (notes.length) p.note([...new Set(notes)].join("\n\n"), "Heads-up");
+
+  const mentalSkills = plan.skills.filter((s) => s === "mental");
+  const otherSkills = plan.skills.filter((s) => s !== "mental");
+  const mentalSkillScope = plan.mentalTooling === "project" ? "project" : "global";
+
+  const runSkillBatch = (names, scope) => {
+    if (!names.length) return true;
+    const noSkills = skillsUnsupportedAgents(agentIds);
+    if (noSkills.length) {
+      p.log.warn(`No skills.sh target for: ${noSkills.join(", ")} — skipped for skills.`);
+    }
+    const capable = skillsCapableAgents(agentIds);
+    if (!capable.length) {
+      p.log.warn("No skills-capable tools selected — skills not installed.");
+      return false;
+    }
+    const cmd = skillsAddCommand(names, capable, scope);
+    if (dryRun) {
+      p.log.step(`Would install skills via skills.sh:\n${cmd}`);
+      return true;
+    }
+    p.log.step(`Installing skills via skills.sh:\n${cmd}`);
+    const result = runSkillsCmd(cmd);
+    if (!result.ok) {
+      p.log.error("skills.sh did not complete. Run this manually when ready:");
+      p.log.message(cmd);
+      return false;
+    }
+    recordInstall(scope, { skills: names, agents: capable });
+    return true;
+  };
+
+  if (!runSkillBatch(otherSkills, "project")) skillsFailed = true;
+  if (!runSkillBatch(mentalSkills, mentalSkillScope)) skillsFailed = true;
+
+  return {
+    cancelled: false,
+    ok: !skillsFailed,
+    partial: skillsFailed,
+    agents: agentIds,
+  };
+}
+
+/**
+ * Back-compat wrapper used by older call sites.
+ * Prefer buildInstallPlan + runInstallPlan.
  */
 export async function runInstall({
   team,
@@ -49,128 +372,42 @@ export async function runInstall({
   dryRun = false,
   yes = false,
   review = true,
+  mentalTooling = DEFAULT_MENTAL_TOOLING,
+  mentalDataPolicy = DEFAULT_MENTAL_DATA_POLICY,
+  allRules,
+  reconcile = true,
 }) {
-  const agentIds = resolveAgents(agents);
-
-  if (review) {
-    const lines = [];
-    if (team.length) lines.push(`Team rules (project): ${team.map((r) => r.name).join(", ")}`);
-    if (personal.length || wantsMental)
-      lines.push(
-        `Personal layer (global): ${[...new Set([...personal.map((r) => r.name), ...(wantsMental ? ["mental"] : [])])].join(", ")}`,
-      );
-    if (skills.length) {
-      const label = (s) => (bundled.includes(s) ? `${s} (bundled)` : s);
-      const teamSkills = skills.filter((s) => s !== "mental");
-      const mentalSkills = skills.filter((s) => s === "mental");
-      if (teamSkills.length)
-        lines.push(`Skills (project): ${teamSkills.map(label).join(", ")}`);
-      if (mentalSkills.length)
-        lines.push(`Skills (global): ${mentalSkills.map(label).join(", ")}`);
-    }
-    lines.push(`Agents: ${agentIds.join(", ")}`);
-    if (team.length) {
-      lines.push("", "Team destinations:");
-      for (const line of describeTeamTargets()) lines.push(`  ${line}`);
-    }
-    p.note(lines.join("\n"), dryRun ? "Review (dry-run)" : "Review");
-
-    if (!yes && !dryRun) {
-      const go = await p.confirm({ message: "Install now?" });
-      if (p.isCancel(go) || !go) {
-        p.cancel("Cancelled.");
-        return { cancelled: true };
-      }
-    }
-  }
-
-  const notes = [];
-
-  if (team.length) {
-    const s = p.spinner();
-    s.start(dryRun ? "Resolving team rule targets" : "Installing team rules");
-    const r = installTeamRules(team, { dryRun });
-    s.stop(
-      dryRun
-        ? `Would write ${r.written.length} file(s)`
-        : `Team rules installed (${r.written.length} file(s))`,
-    );
-    if (r.written.length) p.note(r.written.join("\n"), dryRun ? "Would write" : "Wrote");
-    notes.push(...r.notes);
-    if (!dryRun) recordInstall("project", { rules: team.map((x) => x.name) });
-  }
-
-  // Personal stack: rule (global) + mental skill (global) + exclude
-  if (personal.length || wantsMental) {
-    const personalRules = personal.length
-      ? personal
-      : []; // skill-only mental still gets exclude + skill -g
-    if (personalRules.length) {
-      const s = p.spinner();
-      s.start(dryRun ? "Resolving personal rule targets" : "Installing personal rules (global)");
-      const r = installPersonalRules(personalRules, { dryRun });
-      s.stop(
-        dryRun
-          ? `Would write ${r.written.length} file(s)`
-          : `Personal rules installed (${r.written.length} file(s))`,
-      );
-      if (r.written.length) p.note(r.written.join("\n"), dryRun ? "Would write" : "Wrote");
-      notes.push(...r.notes);
-      if (!dryRun) recordInstall("global", { rules: personalRules.map((x) => x.name) });
-    }
-
-    if (dryRun) {
-      p.log.step("Would ensure .mental/ is in the global git excludes (core.excludesfile).");
-    } else {
-      const ex = ensureMentalExcluded();
-      if (!ex.ok) {
-        p.log.warn(
-          "git not found — .mental/ is NOT yet git-ignored. Once git is installed, run `npx balakit doctor`.",
-        );
-      } else {
-        const verify = checkMentalExcluded();
-        const live = verify.liveIgnored === true ? " (verified: git ignores .mental/ here)" : "";
-        p.log.step(
-          `${ex.appended ? "Secured" : "Confirmed"} .mental/ in your global git excludes → ${ex.file}${ex.created ? " (core.excludesfile wired)" : ""}${live}`,
-        );
-      }
-    }
-  }
-
-  if (notes.length) p.note([...new Set(notes)].join("\n\n"), "Heads-up");
-
-  // Skills: mental always -g; others project unless only personal
-  const mentalSkills = skills.filter((s) => s === "mental");
-  const otherSkills = skills.filter((s) => s !== "mental");
-
-  const runSkillBatch = (names, scope) => {
-    if (!names.length) return;
-    const noSkills = agentIds.filter((a) => !AGENTS.find((x) => x.id === a)?.skillsShId);
-    if (noSkills.length) {
-      p.log.warn(`skills.sh has no confirmed support for: ${noSkills.join(", ")} — skipped for skills.`);
-    }
-    const cmd = skillsAddCommand(names, agentIds, scope);
-    if (dryRun) {
-      p.log.step(`Would install skills via skills.sh:\n${cmd}`);
-    } else {
-      p.log.step(`Installing skills via skills.sh:\n${cmd}`);
-      const result = runSkillsCmd(cmd);
-      if (!result.ok) {
-        p.log.warn("skills.sh did not complete. Run this manually when ready:");
-        p.log.message(cmd);
-      } else {
-        recordInstall(scope, { skills: names });
-      }
-    }
-  };
-
-  runSkillBatch(otherSkills, "project");
-  runSkillBatch(mentalSkills, "global");
-
-  return { cancelled: false, agents: agentIds };
+  const ruleNames = [
+    ...team.map((r) => r.name),
+    ...personal.map((r) => r.name),
+  ];
+  const catalog = allRules ?? [...team, ...personal];
+  const plan = buildInstallPlan({
+    ruleNames,
+    skillNames: skills.filter((s) => !bundled.includes(s) || true),
+    allRules: catalog.length ? catalog : rulesByNames([], ruleNames),
+    agents,
+    mentalTooling,
+    mentalDataPolicy,
+    reconcile,
+  });
+  // Preserve explicit skill list from caller (may include bundled)
+  plan.skills = skills;
+  plan.bundled = bundled;
+  plan.wantsMental = wantsMental ?? plan.wantsMental;
+  return runInstallPlan(plan, { dryRun, yes, review });
 }
 
-/** True when a name is a personal-layer rule. */
+/** True when a name is a Mental-role rule. */
 export function isPersonalRule(name) {
   return PERSONAL_RULES.includes(name);
+}
+
+/** Describe selected tools briefly for the wizard. */
+export function describeSelectedTools(agentIds) {
+  return agentIds.map((id) => {
+    const c = getCapability(id);
+    if (!c) return id;
+    return `${c.label} (rules=${c.rulesConfidence}, skills=${c.skillsShId ? c.agentSkills : "n/a"})`;
+  });
 }

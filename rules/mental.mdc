@@ -1,24 +1,37 @@
 ---
-description: Private project continuity — derive current state before substantive work, preserve consequential decisions, and leave an exact resume point afterward.
+description: Project continuity — derive current state before substantive work, preserve consequential decisions, and leave an exact resume point afterward. Respect the installed Mental data policy.
 alwaysApply: true
 ---
 
 # The `.mental/` Project Continuity Layer
 
-`.mental/` is the user's private, gitignored continuity log for one repository.
-It preserves only what git cannot explain: current focus, consequential decisions
-and rationale, durable repository-specific facts, and the next exact action.
+`.mental/` is the user's project-continuity log for one repository. It preserves
+only what git cannot explain: current focus, consequential decisions and
+rationale, durable repository-specific facts, and the next exact action.
 The **`mental` skill** contains the procedure and templates.
 
 Before substantive work, derive current state from git, the latest journal
 section's `Resume:` line, and decision files marked `open` or `deferred`.
 Treat `.mental/status/current.md` as a disposable cache, not ground truth.
 
-If `.mental/` is absent, first run
-`git check-ignore -q -- .mental/probe`. Create the minimal bundle only when that
-check succeeds. When it fails, continue the requested work without `.mental/`
-and tell the user to run `npx balakit doctor`. Never modify global git
-configuration or the repository's `.gitignore`.
+## Preflight (policy-aware)
+
+Read the Mental data policy from `.balakit/installed.json` or
+`~/.balakit/installed.json` (`mentalDataPolicy`). Defaults to `global-exclude`
+when unset.
+
+**Private policies** (`global-exclude`, `clone-exclude`, `repo-gitignore`):
+before creating `.mental/`, run `git check-ignore -q -- .mental/probe`. Create
+the minimal bundle only when that check succeeds. When it fails, continue
+without `.mental/` and tell the user to run `npx balakit doctor`.
+
+**Tracked policy** (`tracked`): `.mental/` may be committed. Do not require
+check-ignore success. Still never store secrets. Warn before first create that
+there is no privacy promise.
+
+Never silently modify global git configuration, `.gitignore`, or
+`.git/info/exclude`. `balakit doctor` owns ignore setup and repair for the
+recorded policy.
 
 After a substantive task is verified and ready for handoff, append one concise
 journal section ending with
@@ -31,7 +44,7 @@ explicitly deferred. Record a note only when it is durable, non-obvious, and
 likely to prevent repeat investigation. Do not build a duplicate task manager,
 chat transcript, documentation tree, or asset archive.
 
-`.mental/` is optional, per-repository, and machine-local. Never stage, commit,
-publish, or expose its contents in PRs, issues, release notes, code comments, or
-external messages. Never store secrets. Cross-repository personal knowledge
-belongs in the agent's own memory system.
+`.mental/` is optional and per-repository. Under private policies, never stage,
+commit, publish, or expose its contents. Under tracked policy, treat it as
+shared team continuity with the same secret ban. Cross-repository personal
+knowledge belongs in the agent's own memory system.

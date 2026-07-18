@@ -38,13 +38,16 @@ export const SKILLS_DIR = join(PKG_ROOT, "skills");
 export const RULE_BUNDLED_SKILLS = { mental: ["mental"] };
 
 /**
- * Personal-layer rules — machine-wide wiring, never project-committed.
- * Always install at user/global scope.
+ * Rules that participate in the Mental role (rule + skill + data policy).
+ * Tooling scope is chosen at install time (user-wide or project).
  */
 export const PERSONAL_RULES = ["mental"];
 
 /** Default team kit installed by `balakit init`. */
 export const TEAM_INIT_RULES = ["global", "testing", "comments", "changelog"];
+
+/** Manifest schema version for ownership ledger. */
+export const MANIFEST_SCHEMA = 2;
 
 /** Reverse map: skill name → rules that bundle it. */
 export const SKILL_BUNDLED_BY = Object.entries(RULE_BUNDLED_SKILLS).reduce(
