@@ -31,10 +31,17 @@ export function cmdList() {
   return 0;
 }
 
-export function cmdDoctor() {
+/**
+ * @param {{ liftIgnore?: boolean, yes?: boolean, dryRun?: boolean }} [opts]
+ */
+export async function cmdDoctor(opts = {}) {
   const { dataPolicy, hasMental } = resolveMentalPolicy();
   const policy = hasMental ? dataPolicy : DEFAULT_MENTAL_DATA_POLICY;
-  return runPolicyDoctor(policy);
+  return runPolicyDoctor(policy, {
+    liftIgnore: opts.liftIgnore,
+    yes: opts.yes,
+    dryRun: opts.dryRun,
+  });
 }
 
 export function cmdStatus() {

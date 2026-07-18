@@ -242,15 +242,17 @@ export const AGENTS = [
   {
     id: "amazon-q",
     label: "Amazon Q / Kiro",
-    skillsShId: null,
+    skillsShId: "kiro-cli",
     standing: "none",
     scoped: "none",
     personal: "none",
-    agentSkills: "unsupported",
+    agentSkills: "delegated",
     rulesConfidence: "unknown",
     source: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/context-project-rules.html",
     detect: (cwd, home) =>
-      existsSync(join(cwd, ".amazonq")) || existsSync(join(home, ".aws", "amazonq")),
+      existsSync(join(cwd, ".amazonq")) ||
+      existsSync(join(cwd, ".kiro")) ||
+      existsSync(join(home, ".aws", "amazonq")),
   },
   {
     id: "jules",

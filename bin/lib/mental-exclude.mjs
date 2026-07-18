@@ -1,9 +1,10 @@
 /**
- * Machine-wide git excludes for `.mental/` — never a repo `.gitignore`.
+ * Machine-wide git excludes for `.mental/` — never a repo `.gitignore` by default.
  *
- * The mental rule promises `.mental/` stays out of git via core.excludesfile.
- * If that promise isn't kept, a private continuity log can be `git add -A`'d and
- * pushed. These helpers make the guarantee real, idempotent, and testable.
+ * The mental rule promises `.mental/` stays out of git via core.excludesfile
+ * (or another chosen private policy). These helpers make the guarantee real,
+ * idempotent, and testable — and can explicitly lift ignore lines when the
+ * user switches to tracked mode.
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -91,6 +92,99 @@ export function checkMentalExcluded({ home = homedir() } = {}) {
   const ci = runGit("check-ignore", "-q", ".mental/probe");
   const liveIgnored = ci.status === 128 ? null : ci.status === 0;
   return { ok: hasLine && liveIgnored !== false, file, hasLine, configured: !!configured, liveIgnored };
+}
+
+/**
+ * Remove `.mental/` ignore lines (and the balakit comment) from a file.
+ * @param {string} file
+ * @returns {{ ok: boolean, file: string, removed: boolean, reason?: string }}
+ */
+export function removeMentalIgnoreLine(file) {
+  let cur = "";
+  try {
+    cur = readFileSync(file, "utf8");
+  } catch {
+    return { ok: false, file, removed: false, reason: "missing" };
+  }
+  const lines = cur.split(/\r?\n/);
+  const next = [];
+  let removed = false;
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (t === MENTAL_IGNORE_LINE) {
+      removed = true;
+      if (next.length && next[next.length - 1].trim() === MENTAL_IGNORE_COMMENT) {
+        next.pop();
+      }
+      continue;
+    }
+    next.push(lines[i]);
+  }
+  if (!removed) return { ok: true, file, removed: false };
+  while (next.length && next[next.length - 1] === "") next.pop();
+  writeFileSync(file, next.length ? next.join("\n") + "\n" : "");
+  return { ok: true, file, removed: true };
+}
+
+/**
+ * Classify an ignore source path.
+ * @param {string} file
+ */
+function classifyIgnoreFile(file) {
+  const norm = file.split("\\").join("/");
+  if (norm.endsWith("/info/exclude") || norm.includes("/info/exclude")) return "clone-exclude";
+  if (norm.endsWith("/.gitignore") || norm.endsWith(".gitignore")) return "repo-gitignore";
+  return "global-exclude";
+}
+
+/**
+ * Locate files that currently ignore `.mental/`.
+ * @param {{ cwd?: string, home?: string }} [opts]
+ * @returns {{ liveIgnored: boolean|null, sources: Array<{ kind: string, file: string, line?: string }> }}
+ */
+export function locateMentalIgnoreSources({ cwd = process.cwd(), home = homedir() } = {}) {
+  /** @type {Array<{ kind: string, file: string, line?: string }>} */
+  const sources = [];
+  if (!gitAvailable()) return { liveIgnored: null, sources };
+
+  const ci = runGit("-C", cwd, "check-ignore", "-v", ".mental/probe");
+  const liveIgnored = ci.status === 128 ? null : ci.status === 0;
+  if (ci.status === 0 && ci.stdout) {
+    for (const row of ci.stdout.trim().split(/\r?\n/).filter(Boolean)) {
+      const m = row.match(/^(.*):(\d+):(.*)\t/);
+      if (!m) continue;
+      const file = m[1];
+      const pattern = m[3];
+      sources.push({ kind: classifyIgnoreFile(file), file, line: pattern });
+    }
+  }
+
+  const g = checkMentalExcluded({ home });
+  if (g.hasLine && g.file && !sources.some((s) => s.file === g.file)) {
+    sources.push({ kind: "global-exclude", file: g.file, line: MENTAL_IGNORE_LINE });
+  }
+
+  // Scan clone + repo even if check-ignore failed (e.g. not a repo)
+  const cloneExclude = join(cwd, ".git", "info", "exclude");
+  try {
+    const cur = readFileSync(cloneExclude, "utf8");
+    if (cur.split(/\r?\n/).some((l) => l.trim() === MENTAL_IGNORE_LINE)) {
+      if (!sources.some((s) => s.file === cloneExclude)) {
+        sources.push({ kind: "clone-exclude", file: cloneExclude, line: MENTAL_IGNORE_LINE });
+      }
+    }
+  } catch {}
+  const gi = join(cwd, ".gitignore");
+  try {
+    const cur = readFileSync(gi, "utf8");
+    if (cur.split(/\r?\n/).some((l) => l.trim() === MENTAL_IGNORE_LINE)) {
+      if (!sources.some((s) => s.file === gi)) {
+        sources.push({ kind: "repo-gitignore", file: gi, line: MENTAL_IGNORE_LINE });
+      }
+    }
+  } catch {}
+
+  return { liveIgnored, sources };
 }
 
 /**

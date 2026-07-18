@@ -18,12 +18,13 @@ import {
   partitionRules,
   rulesByNames,
 } from "./rules-install.mjs";
-import { skillsAddCommand, runSkillsCmd } from "./skills-bridge.mjs";
+import { skillsAddCommand, runSkillsCmd, resolveSkillsShTargets } from "./skills-bridge.mjs";
 import {
   applyDataPolicy,
   describeDataPolicy,
   describeToolingScope,
   requiresHardConfirm,
+  liftMentalIgnores,
   DEFAULT_MENTAL_TOOLING,
   DEFAULT_MENTAL_DATA_POLICY,
 } from "./mental-policy.mjs";
@@ -292,6 +293,23 @@ export async function runInstallPlan(plan, { dryRun = false, yes = false, review
         p.log.warn(
           `Could not apply data policy (${ex.reason || "unknown"}). Run \`npx balakit doctor\` when ready.`,
         );
+      } else if (plan.mentalDataPolicy === "tracked" && ex.ignored) {
+        p.log.warn(ex.note);
+        if (!yes) {
+          const lift = await p.confirm({
+            message:
+              "Lift balakit .mental/ ignore lines now so tracked mode can work? (affects global exclude for all repos)",
+          });
+          if (!p.isCancel(lift) && lift) {
+            const r = liftMentalIgnores();
+            for (const s of r.lifted) p.log.step(`Lifted ignore from ${s.file}`);
+            if (!r.lifted.length) p.log.warn("No ignore lines were removed.");
+          } else {
+            p.log.info("Left ignores in place. Later: npx balakit doctor --lift-ignore");
+          }
+        } else {
+          p.log.info("Skipped auto-lift under -y. Run: npx balakit doctor --lift-ignore");
+        }
       } else if (ex.note) {
         p.log.warn(ex.note);
       } else if (plan.mentalDataPolicy === "global-exclude") {
@@ -304,7 +322,6 @@ export async function runInstallPlan(plan, { dryRun = false, yes = false, review
         p.log.step(`Mental data policy: ${plan.mentalDataPolicy}`);
       }
 
-      // Always persist policy on the appropriate manifest
       if (plan.mentalTooling === "project") {
         recordInstall("project", {
           mentalTooling: plan.mentalTooling,
@@ -327,8 +344,14 @@ export async function runInstallPlan(plan, { dryRun = false, yes = false, review
       p.log.warn(`No skills.sh target for: ${noSkills.join(", ")} — skipped for skills.`);
     }
     const capable = skillsCapableAgents(agentIds);
-    if (!capable.length) {
-      p.log.warn("No skills-capable tools selected — skills not installed.");
+    const { skillsShIds, skippedUnverified } = resolveSkillsShTargets(capable);
+    if (skippedUnverified.length) {
+      p.log.warn(
+        `skills.sh ids not on balakit verified allowlist (skipped): ${skippedUnverified.join(", ")}`,
+      );
+    }
+    if (!skillsShIds.length) {
+      p.log.warn("No verified skills.sh targets selected — skills not installed.");
       return false;
     }
     const cmd = skillsAddCommand(names, capable, scope);

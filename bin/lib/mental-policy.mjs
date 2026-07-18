@@ -4,7 +4,7 @@
  * Tooling scope (where rule/skill live) is independent of data policy
  * (how `.mental/` stays out of — or enters — git).
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   ensureMentalExcluded,
@@ -13,6 +13,8 @@ import {
   MENTAL_IGNORE_COMMENT,
   gitAvailable,
   runGit,
+  locateMentalIgnoreSources,
+  removeMentalIgnoreLine,
 } from "./mental-exclude.mjs";
 
 /** @typedef {"user"|"project"} MentalToolingScope */
@@ -91,7 +93,7 @@ function ensureLineInFile(file, line, comment = MENTAL_IGNORE_COMMENT) {
 
 /**
  * Apply the chosen data policy. Never stages, commits, or deletes `.mental/` data.
- * Never silently removes a global exclude.
+ * Never silently removes a global exclude — use `liftMentalIgnores` for that.
  *
  * @param {MentalDataPolicy} policy
  * @param {{ cwd?: string, home?: string, dryRun?: boolean }} [opts]
@@ -126,20 +128,47 @@ export function applyDataPolicy(policy, { cwd = process.cwd(), home, dryRun = fa
     return { ok: true, policy, mechanism: "repo-gitignore", ...r };
   }
 
-  // tracked — do not add ignores; explain if global ignore already blocks
-  const check = checkMentalExcluded(home ? { home } : {});
-  const live = runGit("-C", cwd, "check-ignore", "-q", ".mental/probe");
-  const ignored = live.status === 0;
+  // tracked — do not add ignores; report active ignore sources
+  const located = locateMentalIgnoreSources({ cwd, home });
+  const ignored = located.liveIgnored === true || located.sources.length > 0;
   return {
     ok: true,
     policy,
     mechanism: "tracked",
     ignored,
-    globalHasLine: check.hasLine,
+    globalHasLine: located.sources.some((s) => s.kind === "global-exclude"),
+    sources: located.sources,
     note: ignored
-      ? "Tracked mode selected, but .mental/ is currently ignored (global/clone/repo). Already-tracked files are unaffected; use `git add -f .mental` after removing ignore lines if you intend to commit."
+      ? `Tracked mode selected, but .mental/ is still ignored via:\n${located.sources
+          .map((s) => `  - ${s.kind}: ${s.file}`)
+          .join("\n")}\nRun \`npx balakit doctor --lift-ignore\` to remove those lines (explicit confirm; never silent), or \`git add -f .mental\` for a one-off force-add.`
       : "Tracked mode: .mental/ is not ignored here. Agents may create and commit continuity data — no privacy promise.",
   };
+}
+
+/**
+ * Explicitly remove balakit `.mental/` ignore lines from discovered sources.
+ * Never called implicitly — requires `doctor --lift-ignore` (or install prompt).
+ *
+ * @param {{ cwd?: string, home?: string, dryRun?: boolean }} [opts]
+ */
+export function liftMentalIgnores({ cwd = process.cwd(), home, dryRun = false } = {}) {
+  const { sources } = locateMentalIgnoreSources({ cwd, home });
+  if (!sources.length) {
+    return { ok: true, lifted: [], skipped: [], message: "No .mental/ ignore lines found to lift." };
+  }
+  const lifted = [];
+  const skipped = [];
+  for (const s of sources) {
+    if (dryRun) {
+      lifted.push({ ...s, dryRun: true });
+      continue;
+    }
+    const r = removeMentalIgnoreLine(s.file);
+    if (r.removed) lifted.push({ ...s, removed: true });
+    else skipped.push({ ...s, reason: r.reason || "line not present" });
+  }
+  return { ok: true, lifted, skipped };
 }
 
 /**
@@ -157,13 +186,15 @@ export function checkDataPolicy(policy = DEFAULT_MENTAL_DATA_POLICY, { cwd = pro
     : null;
 
   if (policy === "tracked") {
+    const { sources } = locateMentalIgnoreSources({ cwd, home });
     return {
-      ok: live !== true,
+      ok: live !== true && sources.length === 0,
       policy,
       liveIgnored: live,
+      sources,
       message:
-        live === true
-          ? ".mental/ is still ignored — tracked mode cannot see untracked files until ignore is lifted"
+        live === true || sources.length
+          ? ".mental/ is still ignored — run `npx balakit doctor --lift-ignore`"
           : ".mental/ is not ignored (tracked mode)",
     };
   }
@@ -216,23 +247,64 @@ export function checkDataPolicy(policy = DEFAULT_MENTAL_DATA_POLICY, { cwd = pro
 }
 
 /**
- * Mode-aware doctor: repair when the policy is a private mode; report for tracked.
+ * Mode-aware doctor: repair private modes; for tracked, report or lift ignores.
  * @param {MentalDataPolicy} [policy]
- * @param {{ cwd?: string, home?: string }} [opts]
- * @returns {number} exit code
+ * @param {{ cwd?: string, home?: string, liftIgnore?: boolean, yes?: boolean, dryRun?: boolean }} [opts]
+ * @returns {number|Promise<number>} exit code
  */
-export function runPolicyDoctor(policy = DEFAULT_MENTAL_DATA_POLICY, opts = {}) {
+export async function runPolicyDoctor(policy = DEFAULT_MENTAL_DATA_POLICY, opts = {}) {
+  const { liftIgnore = false, yes = false, dryRun = false } = opts;
   console.log(`Mental data policy: ${policy}`);
   console.log(`  ${describeDataPolicy(policy)}\n`);
+
+  if (liftIgnore) {
+    const located = locateMentalIgnoreSources(opts);
+    if (!located.sources.length) {
+      console.log("✓ No .mental/ ignore lines found — nothing to lift.");
+      return 0;
+    }
+    console.log("Will remove .mental/ ignore lines from:");
+    for (const s of located.sources) console.log(`  - ${s.kind}: ${s.file}`);
+    console.log(
+      "\n⚠ This affects privacy for EVERY repo that relied on those lines (especially global-exclude).",
+    );
+    if (dryRun) {
+      console.log("\n[dry-run] No files written.");
+      return 0;
+    }
+    if (!yes) {
+      // dynamic import to avoid clack in unit tests that only call liftMentalIgnores
+      const p = await import("@clack/prompts");
+      const go = await p.confirm({
+        message: "Lift these ignore lines now? (never done silently)",
+      });
+      if (p.isCancel(go) || !go) {
+        console.log("Cancelled — ignores left in place.");
+        return 1;
+      }
+    }
+    const r = liftMentalIgnores(opts);
+    for (const s of r.lifted) console.log(`✓ removed from ${s.file}`);
+    for (const s of r.skipped) console.log(`· skipped ${s.file} (${s.reason || "n/a"})`);
+    const after = locateMentalIgnoreSources(opts);
+    if (after.liveIgnored === true) {
+      console.log(
+        "\n✖ .mental/ is still ignored (another rule may apply). Inspect with `git check-ignore -v .mental/probe`.",
+      );
+      return 1;
+    }
+    console.log("\n✓ Ignore lines lifted. Tracked Mental can see untracked `.mental/` files.");
+    return 0;
+  }
 
   if (policy === "tracked") {
     const c = checkDataPolicy(policy, opts);
     console.log(c.ok ? `✓ ${c.message}` : `✖ ${c.message}`);
     if (!c.ok) {
-      console.log(
-        "\nTracked mode with an active ignore: remove the .mental/ line from global excludes,",
-      );
-      console.log(".git/info/exclude, or .gitignore — or force-add with `git add -f .mental`.");
+      const { sources } = locateMentalIgnoreSources(opts);
+      for (const s of sources) console.log(`  - ${s.kind}: ${s.file}`);
+      console.log("\nRun: npx balakit doctor --lift-ignore");
+      console.log("Or force-add once: git add -f .mental");
       console.log("Balakit never silently removes ignore lines.");
     }
     return c.ok ? 0 : 1;

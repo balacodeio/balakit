@@ -23,17 +23,26 @@ export {
   defaultExcludesFile,
   expandHome,
   runDoctor,
+  locateMentalIgnoreSources,
+  removeMentalIgnoreLine,
 } from "./lib/mental-exclude.mjs";
 export {
   applyDataPolicy,
   checkDataPolicy,
   runPolicyDoctor,
+  liftMentalIgnores,
   DEFAULT_MENTAL_DATA_POLICY,
   DEFAULT_MENTAL_TOOLING,
 } from "./lib/mental-policy.mjs";
 export { renderRulesBlock, renderRepoStandingDocs, mergeManaged, removeManaged, demote } from "./lib/render.mjs";
 export { parseRule, skillDescription, bundledSkillsFor, loadRules, loadSkills } from "./lib/catalog.mjs";
-export { skillsCommand, skillsAddCommand, skillsRemoveCommand } from "./lib/skills-bridge.mjs";
+export {
+  skillsCommand,
+  skillsAddCommand,
+  skillsRemoveCommand,
+  resolveSkillsShTargets,
+  SKILLS_SH_VERIFIED_IDS,
+} from "./lib/skills-bridge.mjs";
 export { installTeamRules, installPersonalRules, partitionRules } from "./lib/rules-install.mjs";
 export {
   detectAgents,
@@ -95,7 +104,11 @@ async function main() {
       code = cmdList();
       break;
     case "doctor":
-      code = cmdDoctor();
+      code = await cmdDoctor({
+        liftIgnore: args.liftIgnore,
+        yes: args.yes,
+        dryRun: args.dryRun,
+      });
       break;
     case "status":
       code = cmdStatus();

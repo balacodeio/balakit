@@ -26,13 +26,15 @@ Usage:
   npx ${CMD} status                  What balakit owns + reconcile health
   npx ${CMD} update                  Refresh installed kit pieces
   npx ${CMD} doctor                  Verify/repair Mental data policy
+  npx ${CMD} doctor --lift-ignore    Explicitly remove .mental/ ignore lines (tracked mode)
 
 Options:
   --agents <ids|all>     Skills targets (default: detect + confirm in wizard)
   --mental-tooling <user|project>
   --mental-data <global-exclude|clone-exclude|repo-gitignore|tracked>
+  --lift-ignore          With doctor: remove discovered .mental/ ignore lines (confirm required)
   --dry-run              Preview without writing
-  -y, --yes              Skip safe confirms (blocked for tracked/repo-gitignore)
+  -y, --yes              Skip safe confirms (blocked for tracked/repo-gitignore; blocked for --lift-ignore)
   -v, --version          Print version
   -h, --help             Show this help
 
@@ -62,6 +64,7 @@ export function parseArgv(argv) {
     withPersonal: false,
     mentalTooling: undefined,
     mentalDataPolicy: undefined,
+    liftIgnore: false,
   };
   const csv = (v) => v.split(",").map((s) => s.trim()).filter(Boolean);
   const commands = new Set([
@@ -105,6 +108,8 @@ export function parseArgv(argv) {
         throw new Error(`Unknown --mental-data: ${v} — use ${MENTAL_DATA_POLICIES.join("|")}`);
       }
       args.mentalDataPolicy = v;
+    } else if (a === "--lift-ignore") {
+      args.liftIgnore = true;
     } else if (a === "--agents") {
       const v = next();
       args.agents = v === "all" ? [...AGENT_IDS] : csv(v);
@@ -138,6 +143,17 @@ export function parseArgv(argv) {
         `--mental-tooling / --mental-data only apply to guided setup, init, or add`,
       );
     }
+  }
+
+  if (args.liftIgnore && args.command !== "doctor") {
+    throw new Error(`--lift-ignore only applies to \`doctor\``);
+  }
+
+  // --lift-ignore must never be silent under -y (cross-repo privacy impact)
+  if (args.liftIgnore && args.yes) {
+    throw new Error(
+      `--lift-ignore cannot be combined with -y; confirm interactively (or use --dry-run to preview)`,
+    );
   }
 
   void personalFlags;

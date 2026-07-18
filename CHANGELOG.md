@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.10.1]
+
+### Fixes
+- **skills.sh agent allowlist** — only verified `-a` ids are passed to skills.sh; Amazon Q / Kiro maps to `kiro-cli`; unknown ids are skipped with a warning.
+- **Tracked Mental + existing excludes** — `doctor --lift-ignore` locates and removes `.mental/` ignore lines with an explicit confirm; never auto-stripped under `-y`.
+
+### Changes
+- `doctor --lift-ignore` cannot be combined with `-y` (preview with `--dry-run`).
+
 ## [v1.10.0]
 
 ### Features

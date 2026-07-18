@@ -30,6 +30,7 @@ npx balakit status
 npx balakit update
 npx balakit remove testing
 npx balakit doctor          # mode-aware Mental data-policy check/repair
+npx balakit doctor --lift-ignore   # explicit unignore for tracked mode (confirm required)
 ```
 
 Optional global install:
@@ -41,7 +42,8 @@ balakit init
 
 Override skills targets with `--agents cursor,claude-code` or `--agents all`.
 Preview with `--dry-run`. `-y` skips safe confirms; it **cannot** silently accept
-`tracked` or `repo-gitignore` Mental data policies.
+`tracked` or `repo-gitignore` Mental data policies, and **cannot** combine with
+`--lift-ignore` (lifting ignore lines always needs an interactive confirm).
 
 ### Guided setup
 
@@ -81,7 +83,9 @@ Flags: `--mental-tooling user|project` and
 
 The data folder `.mental/` is **per-repo** (created by the agent on first
 substantive work when policy allows). Remove never deletes `.mental/` data and
-never silently removes ignore lines.
+never silently removes ignore lines. If you choose `tracked` while a global (or
+other) `.mental/` exclude still exists, Balakit reports the sources and offers
+`doctor --lift-ignore` — it will not auto-strip a global exclude under `-y`.
 
 ### Skills
 
@@ -95,6 +99,8 @@ npx skills add balacodeio/balakit --skill dissect
 
 `balakit add <skill>` runs the equivalent. The `mental` rule always brings the
 `mental` skill. Skills failures exit non-zero (partial state is reported).
+Only skills.sh agent ids on Balakit’s verified allowlist are passed as `-a`
+(refresh via live `npx skills` smoke when adding a new target).
 
 ## Capability model
 
@@ -134,7 +140,9 @@ present.
 require `git check-ignore`; tracked mode does not.
 
 ```bash
-npx balakit doctor   # verify / repair for the recorded policy
+npx balakit doctor                 # verify / repair for the recorded policy
+npx balakit doctor --lift-ignore   # remove discovered .mental/ ignore lines (confirm)
+npx balakit doctor --lift-ignore --dry-run   # preview only
 ```
 
 ## Rules
