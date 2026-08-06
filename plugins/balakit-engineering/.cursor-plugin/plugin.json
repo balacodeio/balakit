@@ -1,0 +1,21 @@
+{
+  "name": "balakit-engineering",
+  "version": "1.11.0",
+  "description": "Engineering workflow skills: authoring, deliberation, dissect, docs, release, and stealth browser fallback.",
+  "author": {
+    "name": "Ali Farahat",
+    "email": "ali@balacode.io",
+    "url": "https://balacode.io"
+  },
+  "homepage": "https://github.com/balacodeio/balakit#readme",
+  "repository": "https://github.com/balacodeio/balakit",
+  "license": "MIT",
+  "keywords": [
+    "engineering",
+    "dissect",
+    "documentation",
+    "release",
+    "authoring",
+    "balakit"
+  ]
+}

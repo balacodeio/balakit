@@ -1,0 +1,54 @@
+---
+description: Guidelines for code comments and documentation — document the why, not the what
+alwaysApply: true
+---
+
+# Comments & Documentation
+
+## Default to zero comments
+
+Names document code. Add an inline comment only when the WHY is non-obvious:
+
+- A hidden constraint not visible in the code.
+- A subtle invariant a reader might violate.
+- A workaround for a specific bug (link the upstream issue).
+- Behavior a competent reader would find surprising.
+
+If removing the comment wouldn't confuse a future reader, delete it.
+
+## Never write
+
+- Restatements of the code — `increment counter` above `counter++`.
+- Task / ticket references — `added for CAN-123`, `fixes billing bug`.
+- Caller references — `used by the contacts module`.
+- Change history — `was async before`, `removed old logic`.
+- Commented-out code.
+- Banner comments — `=== SECTION ===`.
+
+## Authorized Tracking Tags (Exception)
+
+You MUST use the following authorized tags to track technical debt and risks (as required by the Global Rules), using your language's comment syntax. These should cleanly describe the issue for IDE tracking:
+- `BUG:` — For critical, immediate issues.
+- `FIXME:` — For broken code or technical debt needing refactor.
+- `TODO:` — For general planned work.
+- `CONCERN:` — For edge cases or architectural risks.
+- `OPTIMIZE:` — For performance improvements or clean-up tasks.
+
+## Document every exported symbol
+
+Every part of a module's public surface — exported functions, types, classes, constants — gets a documentation comment in your language's convention (doc comment, docstring, etc.). Internal/private helpers only get one when the WHY is non-obvious.
+
+- The first line is a one-sentence summary ending with a period.
+- Document a parameter only when its name isn't self-explanatory. Never restate information the signature already carries (e.g. the type, in a typed language).
+- Document the return only when it isn't obvious from the function name.
+- Document every error/exception the function can raise as part of its contract.
+- Add an example for non-trivial public APIs and shared utilities.
+- Don't duplicate what the language already expresses — let the type system, signatures, and tooling do their job.
+
+## Externally-surfaced docs
+
+When documentation strings are generated into a public API surface (OpenAPI/Swagger, SDK docs, generated reference sites, schema descriptions), **those strings ship to external consumers** — write them for API users, not just your team.
+
+- Describe every public field/parameter with a short user-facing sentence.
+- Map each endpoint/handler summary to the generated summary and description.
+- Declare at least one example response for each public route.

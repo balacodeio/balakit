@@ -1,0 +1,20 @@
+{
+  "name": "balakit-mental",
+  "version": "1.11.0",
+  "description": "Project continuity layer: mental rule + skill for decisions, handoffs, and resume points.",
+  "author": {
+    "name": "Ali Farahat",
+    "email": "ali@balacode.io",
+    "url": "https://balacode.io"
+  },
+  "homepage": "https://github.com/balacodeio/balakit#readme",
+  "repository": "https://github.com/balacodeio/balakit",
+  "license": "MIT",
+  "keywords": [
+    "mental",
+    "continuity",
+    "journal",
+    "handoff",
+    "balakit"
+  ]
+}

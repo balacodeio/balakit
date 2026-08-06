@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Sync the source-of-truth skills/ and rules/ into the locations each agent reads.
+# Sync the source-of-truth skills/ and rules/ into the locations each agent reads,
+# regenerate CLAUDE.md / AGENTS.md, and materialize domain plugins for Agent Plugins
+# / Cursor marketplace installs.
 #
 # Source of truth : skills/  rules/   (develop and iterate here)
+# Generated       : plugins/  .cursor-plugin/marketplace.json
 #
 # Skills mirror to every agent's skills directory (all of them auto-discover
 # SKILL.md from these): .cursor/  .claude/  .agents/.
@@ -35,12 +38,15 @@ cp rules/*.mdc .cursor/rules/
 echo "synced rules  -> .cursor/rules (removed inert .claude/rules, .agents/rules)"
 
 # Regenerate the flattened standing-context files (CLAUDE.md / AGENTS.md) from rules/.
+# Also materialize domain plugins (Agent Plugins / Cursor marketplace).
 if command -v node >/dev/null 2>&1; then
   node scripts/build-agent-rules.mjs
+  node scripts/build-plugins.mjs
 else
-  echo "WARN: node not found on PATH - skipped CLAUDE.md / AGENTS.md regeneration." >&2
+  echo "WARN: node not found on PATH - skipped CLAUDE.md / AGENTS.md / plugins regeneration." >&2
 fi
 
 skills_n=$(find skills -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')
 rules_n=$(find rules -maxdepth 1 -name '*.mdc' | wc -l | tr -d ' ')
-echo "Done. $skills_n skills -> ${skill_mirrors[*]}; $rules_n rules -> .cursor + root CLAUDE.md/AGENTS.md."
+plugins_n=$(find plugins -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+echo "Done. $skills_n skills -> ${skill_mirrors[*]}; $rules_n rules -> .cursor + root CLAUDE.md/AGENTS.md; $plugins_n plugins."

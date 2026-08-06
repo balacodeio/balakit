@@ -6,8 +6,10 @@
 **Opinionated rules and skills for AI coding agents.** Guided setup installs a
 capability-aware kit: standing rules land **AGENTS.md-first** (plus `CLAUDE.md`
 and Cursor `.mdc` when needed); skills go through
-[skills.sh](https://skills.sh/). Mental continuity tooling and `.mental/` data
-policy are chosen explicitly.
+[skills.sh](https://skills.sh/). The same kit is also packaged as **domain
+plugins** ([Agent Plugins](https://agent-plugins.org) + Cursor marketplace) so
+each capability group can install separately. Mental continuity tooling and
+`.mental/` data policy are chosen explicitly.
 
 > Take what you like, ignore the rest: meta-principle, simplicity ladder,
 > changelog/testing/comments discipline, SEO guardrails, and a `.mental/`
@@ -102,6 +104,29 @@ npx skills add balacodeio/balakit --skill dissect
 Only skills.sh agent ids on Balakit’s verified allowlist are passed as `-a`
 (refresh via live `npx skills` smoke when adding a new target).
 
+### Domain plugins (Agent Plugins / Cursor)
+
+`skills/` and `rules/` remain the source of truth. `./sync.sh` materializes
+installable domain plugins under `plugins/` plus
+`.cursor-plugin/marketplace.json` for Cursor’s multi-plugin marketplace layout.
+
+| Plugin | Ships | Format |
+| --- | --- | --- |
+| `balakit-core` | rules: `global`, `testing`, `comments`, `changelog` | Cursor Plugin |
+| `balakit-mental` | `mental` rule + skill | Cursor Plugin |
+| `balakit-seo` | `seo-ai-search` rule + `everything-seo`, `seo-audit` | Cursor Plugin |
+| `balakit-marketing` | `marketing-psychology`, `startup-marketing-brain` | Agent Plugins + Cursor |
+| `balakit-media` | `media-gen` | Agent Plugins + Cursor |
+| `balakit-nlm` | `nlm-skill` | Agent Plugins + Cursor |
+| `balakit-engineering` | `authoring-skills-and-rules`, `cloakbrowser-fallback`, `deep-deliberation`, `dissect`, `documentation-writer`, `release-deploy` | Agent Plugins + Cursor |
+
+Skills-only plugins include a root `plugin.json` conforming to
+[Agent Plugins](https://agent-plugins.org) v1.0.0. Plugins that include rules use
+Cursor’s `.cursor-plugin/plugin.json` (rules are outside the portable v1
+component set). Mental **data policy** / `balakit doctor` stay CLI-only.
+
+See `plugins/README.md`. Regenerate with `node scripts/build-plugins.mjs`.
+
 ## Capability model
 
 Balakit does **not** claim every tool is fully supported. Each entry records:
@@ -182,7 +207,11 @@ bin/lib/                    # catalog, plan, capability registry, mental policy,
 bin/commands/               # init, add, remove, status, interactive, …
 skills/<name>/SKILL.md      # source of truth (skills.sh discovery)
 rules/<name>.mdc            # source of truth for rules
+plugins/<name>/             # generated domain plugins (Agent/Cursor)
+.cursor-plugin/marketplace.json  # Cursor multi-plugin marketplace
 scripts/build-agent-rules.mjs  # generates CLAUDE.md + AGENTS.md (shared render)
+scripts/build-plugins.mjs      # generates plugins/ + marketplace.json
+scripts/plugins-catalog.mjs    # domain plugin membership
 .cursor/  .claude/  .agents/   # committed skill mirrors
 sync.ps1  sync.sh              # push source → mirrors, then regenerate
 ```

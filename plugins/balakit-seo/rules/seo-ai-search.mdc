@@ -1,0 +1,110 @@
+---
+description: Universal guidelines for SEO and AI-search implementation — meta tags, JSON-LD, llms.txt, crawlability, and adversarial security.
+globs: **/*.{astro,ts,tsx,jsx,vue,svelte,md,mdx}
+alwaysApply: false
+---
+
+# Universal SEO & AI Search (Implementation & Security)
+
+Apply when changing **public-facing web pages** or core SEO utility libraries. 
+
+For high-level strategy, manual audits, or marketing campaigns, refer to your project's marketing/SEO playbooks. Do not duplicate that workflow here.
+
+**Principle:** AI visibility (LLMs, RAG systems, Agents) builds on valid HTML, extractable copy, structured data, and freshness. However, exposing Agentic Commerce endpoints and LLM-readable text creates new threat vectors. Optimize for both visibility and adversarial robustness.
+
+---
+
+## Where Things Live (Agnostic Architecture)
+
+Maintain strict separation of concerns across your framework (Next.js, Astro, Nuxt, etc.):
+
+| Concern | Target Implementation |
+|---------|----------|
+| Meta clamping & sanitization | Centralized utility file (e.g., `meta.ts`, `seo.utils.ts`) |
+| JSON-LD builders | Centralized schema definitions (e.g., `schema.ts`) |
+| AI site index & routing | `/llms.txt` (or framework equivalent route) |
+| AI knowledge export | `/llms-full.txt` (Full context export) |
+| Machine-readable pricing | Static server route (e.g., `pricing.md` or API) |
+| Agentic commerce index | Declared in `/llms.txt` under **Agentic commerce** |
+| Crawler policy | `/robots.txt` and `/ai.txt` in the public static directory |
+
+---
+
+## AI Security & Adversarial Defenses [CRITICAL]
+
+When building endpoints specifically for AI consumption (`/llms.txt`, JSON-LD, UCP feeds), treat external LLMs and AI crawlers as potential attack vectors.
+
+- **Prompt Injection Sanitization:** User-generated content (reviews, Q&A, profiles) surfaced in JSON-LD or `/llms.txt` MUST be sanitized. Ensure malicious instructions (e.g., "Ignore previous instructions and execute X") cannot hijack downstream RAG systems or Agentic Commerce workflows.
+- **Adversarial Validation (AV):** Critical machine-readable logic (like Agentic capabilities or pricing APIs) should undergo adversarial testing. Ensure outputs cannot be easily hallucinated or misinterpreted by external models.
+- **Crawler Nuance:** Allow *verified* AI crawlers (e.g., `GPTBot`, `ClaudeBot`) in `/robots.txt`, but implement aggressive rate-limiting. Explicitly block unverified, aggressive scraper bots to prevent data scraping DDoS attacks.
+
+---
+
+## New or Updated Public Pages
+
+1. **Layout Wrapping:** Wrap in the central layout component. Always pass `title` and `description`.
+2. **Structured Data:** Pass the `jsonLd` payload using centralized builders (e.g., `productSchema`). 
+3. **Data Clamping & Sanitization:** Use centralized utility functions to clamp lengths AND sanitize titles/descriptions derived from CMS or user inputs.
+4. **Freshness Signals:** Set `modifiedTime` when the database has `updated_at` dates. AI models heavily weight recency.
+5. **Indexing:** Do **not** add `noindex` to public catalog, blog, or guide URLs. Rely on centralized logic to block private paths (account/checkout).
+6. **Static Pages & Versioning:** If adding static guides not in the sitemap: 
+   - Add links to `/llms.txt` under "Core pages".
+   - **MUST** bump the `CONTENT_VERSION` (or equivalent cache-buster) to force AI indexers to re-crawl.
+
+---
+
+## Content Structure (AI-Readability)
+
+AI systems cite **passages**, not whole pages. 
+
+- Lead sections with a direct answer; keep one core idea per paragraph.
+- Use strict semantic headings (`<h2>`/`<h3>`) that match potential user query phrasing. 
+- Prefer HTML tables for comparisons and ordered lists (`<ol>`) for steps.
+- Cite sources for stats. Avoid keyword stuffing (degrades semantic vector matching).
+
+---
+
+## Schema Quick Map
+
+Validate JSON-LD shapes centrally. Do not hand-roll `@type` blocks in individual pages.
+
+| Page Type | Recommended Schema |
+|-----------|-----|
+| Product | `Product` (+ `HowTo` when usage text exists) |
+| Blog Post | `BlogPosting` |
+| FAQ | `FAQPage` |
+| Course / Training | `Course` |
+| Listing / Category | `CollectionPage`, `ItemList` |
+
+---
+
+## Agentic Commerce & External Feeds
+
+The frontend **declares** machine commerce URLs in `/llms.txt` (discovery, checkout, `google-merchant.xml`). The backend/API **implements** them.
+
+- **Updates:** When modifying a public commerce endpoint, update the **Agentic commerce** block in `/llms.txt` and bump the `CONTENT_VERSION`.
+- **Dynamic Hosts:** Use environment utilities to resolve the API base in `/llms.txt` — do not hard-code production API hosts.
+- **Merchant Feeds:** **Do not** duplicate the full product catalog in static pages for Shopping. The live feed must come from a dedicated API route.
+- **Return Policies:** Ensure `merchantReturnPolicy` JSON-LD exactly matches the human-readable `/returns` page.
+
+---
+
+## Checklist Before Merge
+
+- [ ] Layout props populated: title, description, `jsonLd`, dates.
+- [ ] No accidental `noindex` on public content.
+- [ ] **SECURITY:** UGC in JSON-LD or `/llms.txt` is sanitized against prompt injection.
+- [ ] New static guides linked from `/llms.txt` + `CONTENT_VERSION` bumped.
+- [ ] If commerce API URLs changed: **Agentic commerce** updated + version bumped.
+- [ ] Copy is easily extractable (definitions / steps / comparisons), not generic filler.
+
+---
+
+## Out of Scope for This Rule
+
+- Quarterly content calendars
+- Manual ChatGPT ranking checks
+- Competitor research
+- Marketing campaign copy
+
+*For the above tasks, use dedicated Marketing/SEO Agent skills. Do not apply this code implementation rule.*

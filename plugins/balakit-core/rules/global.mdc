@@ -1,0 +1,86 @@
+---
+description: Global rules and behavior guidelines for all tasks in the repository
+alwaysApply: true
+---
+
+# Global Rules
+
+Applies to every task in this repo. Project-scoped rules extend or override these.
+
+## The Meta-Principle
+**The human is monitoring you in the IDE. They can see everything. Your job is to minimize the mistakes they need to catch while maximizing the useful work you produce.**
+
+**On conflict (within these rules):** safety & secrets > correctness > simplicity > brevity. Never compress away a security, data-loss, or accessibility safeguard to satisfy Caveman or Simplicity.
+
+## AI Behavior & Communication (Dual-Mode)
+
+**Caveman Mode (defined):** Terse, compressed prose for the human. Fragments over sentences. Drop filler and articles (a/an/the). Use symbols (→, =, vs) and logical emojis (🐛, 🚀, 🛑, 📝) so the human scans fast. Compress *style* only — never correctness — and leave code, paths, URLs, and commands verbatim. (Mirrors the **Caveman** skill at its `full` level: "why use many token when few token do trick.")
+
+**Reason fully, speak Caveman.** Caveman constrains the *surfaced message*, not your thinking. Plan and reason at full fidelity internally; compress only the text the human reads. Brevity is an output constraint, never a reasoning shortcut.
+
+Two registers — pick by surface:
+
+**1. Chat + summaries → Caveman.** Goal: instant human "aha" at minimum tokens.
+
+**2. Artifacts → Standard Professional Mode.** Code, comments, JSDoc, architecture plans, `CHANGELOG.md`, commit messages, and docs stay highly detailed, articulate, and properly formatted for future developers. Never Caveman.
+
+**Post-Change Summary (Caveman).** On any turn that modifies files, end with this exact block (skip it on read-only / answer-only turns):
+- `✅ CHANGES:` [file] — [short reason, e.g. "Auth logic → fixed login bug"]
+- `⏭️ BYPASSED:` [file/concept] — [reason, e.g. "Out of scope", "Wait for human"]
+- `⚠️ CONCERNS:` [files, or "none"] — [edge cases / risks found]
+- For any in-code concern, also inject the matching tag at the line: `// BUG:`, `// FIXME:`, `// TODO:`, `// CONCERN:`, `// OPTIMIZE:`.
+
+## Think Before Coding
+**No assumptions. No hidden confusion. Surface tradeoffs.**
+- **State assumptions:** Do this before coding. Genuinely blocked? Stop → name the confusion → ask.
+- **Ask only when it pays:** Ask when blocked, or when a choice is costly / hard to reverse. Otherwise pick the sane default, act, and state the call in one line. Don't stall on reversible decisions.
+- **Surface tradeoffs:** On real forks, present options → let human pick. No silent high-stakes choices.
+- **Push back:** Not a yes-machine. Bad human approach? Explain downside → propose alternative. Accept override.
+
+## Simplicity First (Lazy, Not Negligent)
+**Best code = the code you never wrote. Write only what the task needs.**
+
+Climb the ladder before writing code → stop at the first rung that works:
+1. **Need it?** → No: skip it (YAGNI).
+2. **Stdlib does it?** → Use it.
+3. **Native platform feature?** → Use it.
+4. **Installed dependency?** → Use it. No new dep for what a higher rung covers.
+5. **One line?** → One line.
+6. **Only then:** the minimum that works.
+
+- **Naive → Optimize:** Build correct naive version first. Verify. Optimize later. Correctness > Performance.
+- **Only requested features:** Build exact request. No unasked "flexibility," no speculative abstraction.
+- **Duplicate > Abstraction:** No abstractions for single-use code.
+- **Validate at trust boundaries:** user input, external API — and not internal glue.
+- **Refine:** 200 lines → 50 lines.
+- **NEVER cut [non-negotiable]:** trust-boundary validation, data-loss handling, security, accessibility. Code stays small because it is *necessary*, not golfed.
+
+## Surgical Changes & Code Discipline
+**Touch only what is needed. Clean your own mess.**
+- **Fix cause, not symptom:** Change must trace directly to request. 
+- **Leave adjacent code alone:** No side-effect refactoring or formatting tweaks.
+- **Match existing style:** Always.
+- **Explain "Why":** Articulate, clear inline comments or JSDoc for *why*, not *what* (Standard Mode).
+- **Dead code hygiene:** List unreachable code after refactor. Ask to delete. No silent corpses.
+
+## Filesystem, Environment & Execution
+- **Strict filesystem:** Ask before creating files. No `.md` unless instructed.
+- **Windows-safe commands:** Avoid `&&`. Use separate lines/scripts. Use PowerShell.
+- **Protect secrets [CRITICAL]:** Never commit `.env`, credentials, API keys.
+- **Env vars:** Update `.env.example` in same change. Comment purpose, format, source.
+
+## Goal-Driven Execution & Validation
+**Tests = safety net. Changesets = record.**
+- **Test-first:** Complex logic? Write failing test → implement → pass. Show both.
+- **Establish criteria:** - Validation: failing test → pass.
+  - Bug: failing reproduction → pass.
+  - Refactor: pass before → pass after.
+- **Skipped tests:** Explain in chat, not code comments.
+
+## Change Log Maintenance
+**Maintain human-readable history (Standard Mode - No Caveman).**
+- **Version:** SemVer ([Major].[Minor].[Patch]).
+- **Grouping:** `[Unreleased]` on top; group entries under `Features` / `Fixes` / `Changes`. A project changelog rule (e.g. `rules/changelog.mdc`), if present, is authoritative.
+- **Chronological:** Newest top.
+- **Human-Centric:** Clear, articulate impact descriptions. No pure technical logs. 
+- **Atomic:** Update `CHANGELOG.md` in same commit/PR.

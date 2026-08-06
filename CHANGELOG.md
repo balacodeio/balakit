@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.11.0]
+
+### Features
+- **Domain Agent/Cursor plugins** — seven installable plugins under `plugins/` (`balakit-core`, `balakit-mental`, `balakit-seo`, `balakit-marketing`, `balakit-media`, `balakit-nlm`, `balakit-engineering`), generated from `skills/` and `rules/` with a Cursor marketplace manifest at `.cursor-plugin/marketplace.json`.
+
+### Changes
+- `./sync.sh` / `sync.ps1` also run `scripts/build-plugins.mjs` so plugin packages stay in sync with the source kit.
+- npm package now includes `plugins/` and `.cursor-plugin/` for marketplace and Agent Plugins consumers; CLI install path (AGENTS.md + skills.sh + Mental policy) is unchanged.
+
 ## [v1.10.1]
 
 ### Fixes

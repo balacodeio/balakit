@@ -1,0 +1,56 @@
+---
+description: Testing philosophy, conventions, and tooling — write tests that earn their place
+alwaysApply: true
+---
+
+# Testing
+
+## Philosophy
+
+Every test must earn its place by preventing a bug that would affect users. Do not write tests to hit a coverage number. If you cannot explain what bug a test would catch, do not write it.
+
+Favor integration tests over unit tests. Test real code paths — input validated, work performed, result returned. Reserve unit tests for complex business logic: pricing calculations, date handling, permission resolution. Do not write unit tests for glue code or tests that mock everything away.
+
+## Folder Convention
+
+Mirror the source structure under a single top-level tests location (or your framework's convention), separating tiers clearly:
+
+- Unit tests — complex business logic only.
+- Integration tests — the default tier for most behavior.
+- End-to-end tests — full-stack flows.
+
+Follow whatever layout the project already uses; do not impose a new one mid-project.
+
+## Tooling
+
+- Use the test runner the project already adopts. Do not introduce an additional test framework without team agreement.
+- Match the existing assertion style, fixtures, and mocking approach.
+- Keep end-to-end tests pointed at a deployed/staging-like environment rather than hard-coded local URLs when the project's flow expects that.
+
+## When to Write Tests
+
+A behavior change in a PR requires a test that exercises that behavior. "Behavior change" means: what the user sees or what the API returns is different. Refactors that preserve behavior do not require new tests — existing tests should still pass.
+
+**Bug fixes:** Write the failing test first. The test is the proof the bug existed and that the fix works.
+
+## End-to-End Tests
+
+E2E tests are often slow and run against a deployed environment rather than locally. Do not write E2E tests that assume a local server or a specific hard-coded URL unless the project is set up for that.
+
+Do not write E2E tests speculatively. Only write them after the user confirms the feature is done. When a feature implementation appears complete, proactively ask the user (Caveman format):
+- *"Feature done? Write E2E?"*
+
+## Secrets [CRITICAL]
+
+Never commit API keys, tokens, passwords, or database URLs in any file — including config, `.env`, source code, or test fixtures.
+- Use local-only secret files (e.g. `.env.local`, `.dev.vars`) that are gitignored.
+- Use the platform's secret manager for deployed environments.
+- Prefer an automated secret scanner (e.g. `gitleaks`) in pre-commit hooks and CI to enforce this.
+
+## Skipping Tests
+
+If you skip tests, say so in chat with the reason — never in a code comment.
+**Acceptable reasons:**
+1. The path is provably unreachable.
+2. An existing test already covers the exact behavior.
+3. The human explicitly overrode the test requirement.

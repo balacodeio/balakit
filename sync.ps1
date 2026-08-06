@@ -1,7 +1,10 @@
 #!/usr/bin/env pwsh
-# Sync the source-of-truth skills/ and rules/ into the locations each agent reads.
+# Sync the source-of-truth skills/ and rules/ into the locations each agent reads,
+# regenerate CLAUDE.md / AGENTS.md, and materialize domain plugins for Agent Plugins
+# / Cursor marketplace installs.
 #
 # Source of truth : skills/  rules/   (develop and iterate here)
+# Generated       : plugins/  .cursor-plugin/marketplace.json
 #
 # Skills mirror to every agent's skills directory (all of them auto-discover
 # SKILL.md from these): .cursor/  .claude/  .agents/.
@@ -35,12 +38,15 @@ Copy-Item -Force -Path 'rules/*.mdc' -Destination '.cursor/rules/'
 Write-Host "synced rules  -> .cursor/rules (removed inert .claude/rules, .agents/rules)"
 
 # Regenerate the flattened standing-context files (CLAUDE.md / AGENTS.md) from rules/.
+# Also materialize domain plugins (Agent Plugins / Cursor marketplace).
 if (Get-Command node -ErrorAction SilentlyContinue) {
     node scripts/build-agent-rules.mjs
+    node scripts/build-plugins.mjs
 } else {
-    Write-Warning "node not found on PATH - skipped CLAUDE.md / AGENTS.md regeneration."
+    Write-Warning "node not found on PATH - skipped CLAUDE.md / AGENTS.md / plugins regeneration."
 }
 
 $skillCount = (Get-ChildItem -Path 'skills' -Directory).Count
 $ruleCount  = (Get-ChildItem -Path 'rules' -Filter '*.mdc').Count
-Write-Host "Done. $skillCount skills -> $($skillMirrors -join ', '); $ruleCount rules -> .cursor + root CLAUDE.md/AGENTS.md."
+$pluginCount = if (Test-Path 'plugins') { (Get-ChildItem -Path 'plugins' -Directory).Count } else { 0 }
+Write-Host "Done. $skillCount skills -> $($skillMirrors -join ', '); $ruleCount rules -> .cursor + root CLAUDE.md/AGENTS.md; $pluginCount plugins."
