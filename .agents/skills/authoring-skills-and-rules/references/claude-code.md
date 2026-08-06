@@ -50,7 +50,7 @@ Sources: [Claude Code Skills](https://code.claude.com/docs/en/skills) ·
 - **Graduate to a Skill** when a CLAUDE.md section grows past a few paragraphs
   and becomes a procedure. CLAUDE.md = facts; Skill = how-to.
 - A user-global `~/.claude/CLAUDE.md` applies across all projects.
-- **`@import` syntax:** a line like `@rules/global.mdc` pulls another file's
+- **`@import` syntax:** a line like `@rules/base.mdc` pulls another file's
   content into CLAUDE.md. Imports resolve recursively up to **4 hops**; relative
   paths resolve from the *importing* file. Caveat: imports keep the file tidy but
   do **not** save context — imported content still loads in full at launch.

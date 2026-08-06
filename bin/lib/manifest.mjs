@@ -10,7 +10,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
-import { VERSION, MANIFEST_SCHEMA, PERSONAL_RULES } from "./pkg.mjs";
+import { VERSION, MANIFEST_SCHEMA, PERSONAL_RULES, canonicalizeRuleNames } from "./pkg.mjs";
 import {
   DEFAULT_MENTAL_DATA_POLICY,
   DEFAULT_MENTAL_TOOLING,
@@ -52,7 +52,7 @@ function empty() {
  * @returns {Manifest}
  */
 export function migrateManifest(data) {
-  const rules = Array.isArray(data.rules) ? data.rules : [];
+  const rules = canonicalizeRuleNames(Array.isArray(data.rules) ? data.rules : []);
   const skills = Array.isArray(data.skills) ? data.skills : [];
   const hasMental =
     rules.some((r) => PERSONAL_RULES.includes(r)) || skills.includes("mental");
@@ -110,7 +110,7 @@ export function writeManifest(file, data) {
   mkdirSync(dirname(file), { recursive: true });
   const out = {
     schema: MANIFEST_SCHEMA,
-    rules: [...new Set(data.rules ?? [])].sort(),
+    rules: canonicalizeRuleNames(data.rules ?? []).sort(),
     skills: [...new Set(data.skills ?? [])].sort(),
     agents: [...new Set(data.agents ?? [])].sort(),
     surfaces: [...new Set(data.surfaces ?? [])].sort(),
@@ -160,7 +160,7 @@ export function recordInstall(scope, patch, { cwd = process.cwd(), home = homedi
 export function recordRemove(scope, names, { cwd = process.cwd(), home = homedir(), dryRun = false } = {}) {
   const file = scope === "global" ? globalManifestPath(home) : projectManifestPath(cwd);
   const cur = readManifest(file);
-  const dropR = new Set(names.rules ?? []);
+  const dropR = new Set(canonicalizeRuleNames(names.rules ?? []));
   const dropS = new Set(names.skills ?? []);
   const nextRules = cur.rules.filter((r) => !dropR.has(r));
   const nextSkills = cur.skills.filter((s) => !dropS.has(s));

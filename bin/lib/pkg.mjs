@@ -43,8 +43,32 @@ export const RULE_BUNDLED_SKILLS = { mental: ["mental"] };
  */
 export const PERSONAL_RULES = ["mental"];
 
+/**
+ * Rule name aliases → canonical basenames. Keeps old CLI/manifest names working
+ * after renames (e.g. `global` → `base`).
+ */
+export const RULE_ALIASES = Object.freeze({
+  global: "base",
+});
+
+/**
+ * Map a user/manifest rule name to the on-disk canonical name.
+ * @param {string} name
+ */
+export function canonicalizeRuleName(name) {
+  return RULE_ALIASES[name] ?? name;
+}
+
+/**
+ * Canonicalize a list of rule names, dropping duplicates after aliasing.
+ * @param {string[]} names
+ */
+export function canonicalizeRuleNames(names) {
+  return [...new Set(names.map(canonicalizeRuleName))];
+}
+
 /** Default team kit installed by `balakit init`. */
-export const TEAM_INIT_RULES = ["global", "testing", "comments", "changelog"];
+export const TEAM_INIT_RULES = ["base", "testing", "comments", "changelog"];
 
 /** Manifest schema version for ownership ledger. */
 export const MANIFEST_SCHEMA = 2;

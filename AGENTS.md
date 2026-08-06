@@ -5,8 +5,8 @@
 
 Standing rules for OpenCode, Codex, Cursor, and GitHub Copilot, generated from this repository's `rules/*.mdc`. Edit the source rules, then run the sync script to regenerate this file.
 
-<!-- from rules/global.mdc -->
-## Global Rules
+<!-- from rules/base.mdc -->
+## Base Rules
 
 Applies to every task in this repo. Project-scoped rules extend or override these.
 

@@ -4,7 +4,7 @@
  */
 import * as p from "@clack/prompts";
 import { join } from "node:path";
-import { CMD, VERSION, PERSONAL_RULES } from "../lib/pkg.mjs";
+import { CMD, VERSION, PERSONAL_RULES, canonicalizeRuleName } from "../lib/pkg.mjs";
 import { loadRules, loadSkills } from "../lib/catalog.mjs";
 import {
   removeTeamRules,
@@ -39,7 +39,8 @@ export async function cmdRemove(opts) {
   const ruleNames = [];
   const skillNames = [];
   for (const n of opts.names) {
-    if (ruleSet.has(n)) ruleNames.push(n);
+    const rule = canonicalizeRuleName(n);
+    if (ruleSet.has(rule)) ruleNames.push(rule);
     else if (skillSet.has(n)) skillNames.push(n);
     else {
       console.error(`Unknown name: ${n}`);

@@ -2,7 +2,7 @@
  * `balakit add <names...>` — add rules and/or skills by name.
  */
 import * as p from "@clack/prompts";
-import { CMD, VERSION } from "../lib/pkg.mjs";
+import { CMD, VERSION, canonicalizeRuleName } from "../lib/pkg.mjs";
 import { loadRules, loadSkills } from "../lib/catalog.mjs";
 import { buildInstallPlan, runInstallPlan } from "../lib/install.mjs";
 import {
@@ -35,7 +35,8 @@ export async function cmdAdd(opts) {
   const ruleNames = [];
   const skillNames = [];
   for (const n of opts.names) {
-    if (ruleSet.has(n)) ruleNames.push(n);
+    const rule = canonicalizeRuleName(n);
+    if (ruleSet.has(rule)) ruleNames.push(rule);
     else if (skillSet.has(n)) skillNames.push(n);
     else {
       console.error(`Unknown name: ${n} — see \`balakit list\``);

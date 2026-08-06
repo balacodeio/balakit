@@ -1,9 +1,9 @@
 ---
-description: Global rules and behavior guidelines for all tasks in the repository
+description: Base rules and behavior guidelines for all tasks in the repository
 alwaysApply: true
 ---
 
-# Global Rules
+# Base Rules
 
 Applies to every task in this repo. Project-scoped rules extend or override these.
 

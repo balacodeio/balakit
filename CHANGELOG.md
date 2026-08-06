@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.12.0]
+
+### Changes
+- Renamed the standing `global` rule to `base` (`rules/base.mdc`). CLI accepts the legacy name as an alias; manifests migrate `global` → `base` on read/write.
+
 ## [v1.11.0]
 
 ### Features

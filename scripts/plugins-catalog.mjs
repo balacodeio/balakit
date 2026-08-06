@@ -29,7 +29,7 @@ export const PLUGINS = [
       "Standing project rules: meta-principle, testing, comments, and changelog discipline.",
     keywords: ["rules", "coding-standards", "agents-md", "balakit"],
     format: "cursor",
-    rules: ["global", "testing", "comments", "changelog"],
+    rules: ["base", "testing", "comments", "changelog"],
     skills: [],
   },
   {

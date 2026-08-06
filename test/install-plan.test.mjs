@@ -55,12 +55,12 @@ afterEach(() => {
 });
 
 const sampleAlways = {
-  name: "global",
+  name: "base",
   always: true,
   globs: "",
   description: "meta",
-  body: "# Global\n\nDo the right thing.",
-  raw: "---\nalwaysApply: true\n---\n# Global\n\nDo the right thing.\n",
+  body: "# Base\n\nDo the right thing.",
+  raw: "---\nalwaysApply: true\n---\n# Base\n\nDo the right thing.\n",
 };
 
 const sampleScoped = {
@@ -83,7 +83,7 @@ const sampleTesting = {
 
 test("buildInstallPlan reconciles add with existing manifest (no AGENTS shrink)", () => {
   installTeamRules([sampleAlways, sampleTesting], { cwd });
-  recordInstall("project", { rules: ["global", "testing"] }, { cwd });
+  recordInstall("project", { rules: ["base", "testing"] }, { cwd });
 
   const plan = buildInstallPlan({
     ruleNames: ["seo-ai-search"],
@@ -95,7 +95,7 @@ test("buildInstallPlan reconciles add with existing manifest (no AGENTS shrink)"
     home,
   });
 
-  assert.ok(plan.team.some((r) => r.name === "global"));
+  assert.ok(plan.team.some((r) => r.name === "base"));
   assert.ok(plan.team.some((r) => r.name === "testing"));
   assert.ok(plan.team.some((r) => r.name === "seo-ai-search"));
 
@@ -104,6 +104,15 @@ test("buildInstallPlan reconciles add with existing manifest (no AGENTS shrink)"
   assert.match(body, /Do the right thing/);
   assert.match(body, /Write real tests/);
   assert.match(body, /Ship meta tags/);
+});
+
+test("migrateManifest renames legacy global rule to base", () => {
+  const m = migrateManifest({
+    schema: 2,
+    rules: ["global", "testing", "global"],
+    skills: [],
+  });
+  assert.deepEqual(m.rules, ["base", "testing"]);
 });
 
 test("migrateManifest v1 mental → user + global-exclude", () => {
@@ -119,7 +128,7 @@ test("migrateManifest v1 mental → user + global-exclude", () => {
 });
 
 test("parseArgv rejects --personal on add", () => {
-  assert.throws(() => parseArgv(["add", "global", "--personal"]), /only apply/);
+  assert.throws(() => parseArgv(["add", "base", "--personal"]), /only apply/);
 });
 
 test("parseArgv accepts mental policy on init", () => {
@@ -191,7 +200,7 @@ test("safe remove refuses wipe when manifest empty but block live", async () => 
   assert.ok(hasManagedBlock(join(cwd, "AGENTS.md")));
   // No manifest written
   const { cmdRemove } = await import("../bin/commands/remove.mjs");
-  const code = await cmdRemove({ names: ["global"], yes: true, dryRun: false });
+  const code = await cmdRemove({ names: ["base"], yes: true, dryRun: false });
   assert.equal(code, 1);
   assert.ok(hasManagedBlock(join(cwd, "AGENTS.md")), "block preserved");
   assert.ok(readFileSync(join(cwd, "AGENTS.md"), "utf8").includes(BEGIN));

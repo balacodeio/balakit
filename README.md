@@ -25,7 +25,7 @@ npx balakit init --with-personal -y
 ```
 
 ```bash
-npx balakit add global testing
+npx balakit add base testing
 npx balakit add mental --mental-tooling user --mental-data clone-exclude
 npx balakit list            # rules, skills, capability matrix
 npx balakit status
@@ -66,7 +66,7 @@ Preview with `--dry-run`. `-y` skips safe confirms; it **cannot** silently accep
 | `CLAUDE.md` | Same managed block — Claude Code adapter |
 | `.cursor/rules/<name>.mdc` | **Only** glob-scoped rules (e.g. `seo-ai-search`) |
 
-Default team rules: `global`, `testing`, `comments`, `changelog`.
+Default team rules: `base`, `testing`, `comments`, `changelog`.
 
 `add` **reconciles** with the project manifest so later adds never shrink the
 managed block.
@@ -112,7 +112,7 @@ installable domain plugins under `plugins/` plus
 
 | Plugin | Ships | Format |
 | --- | --- | --- |
-| `balakit-core` | rules: `global`, `testing`, `comments`, `changelog` | Cursor Plugin |
+| `balakit-core` | rules: `base`, `testing`, `comments`, `changelog` | Cursor Plugin |
 | `balakit-mental` | `mental` rule + skill | Cursor Plugin |
 | `balakit-seo` | `seo-ai-search` rule + `everything-seo`, `seo-audit` | Cursor Plugin |
 | `balakit-marketing` | `marketing-psychology`, `startup-marketing-brain` | Agent Plugins + Cursor |
@@ -174,7 +174,7 @@ npx balakit doctor --lift-ignore --dry-run   # preview only
 
 | Rule | Typical use |
 | --- | --- |
-| `global` | Meta-principle, dual-mode communication, simplicity ladder, repo hygiene |
+| `base` | Meta-principle, dual-mode communication, simplicity ladder, repo hygiene |
 | `changelog` | Changelog maintenance (grouped Features / Fixes / Changes) |
 | `comments` | Comments and JSDoc standards |
 | `mental` | Continuity layer — choose tooling scope + data policy; bundles `mental` skill |

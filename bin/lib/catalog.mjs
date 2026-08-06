@@ -47,13 +47,13 @@ export function skillDescription(skillMd) {
   return description;
 }
 
-/** All packaged rules, global first then alphabetical. */
+/** All packaged rules, base first then alphabetical. */
 export function loadRules() {
   return readdirSync(RULES_DIR)
     .filter((f) => f.endsWith(".mdc"))
     .map((f) => parseRule(join(RULES_DIR, f)))
     .sort((a, b) =>
-      a.name === "global" ? -1 : b.name === "global" ? 1 : a.name.localeCompare(b.name),
+      a.name === "base" ? -1 : b.name === "base" ? 1 : a.name.localeCompare(b.name),
     );
 }
 

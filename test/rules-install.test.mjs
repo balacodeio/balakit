@@ -48,12 +48,12 @@ afterEach(() => {
 });
 
 const sampleAlways = {
-  name: "global",
+  name: "base",
   always: true,
   globs: "",
   description: "meta",
-  body: "# Global\n\nDo the right thing.",
-  raw: "---\nalwaysApply: true\n---\n# Global\n\nDo the right thing.\n",
+  body: "# Base\n\nDo the right thing.",
+  raw: "---\nalwaysApply: true\n---\n# Base\n\nDo the right thing.\n",
 };
 
 const sampleScoped = {
@@ -82,7 +82,7 @@ test("partitionRules splits personal from team", () => {
   );
   assert.deepEqual(
     team.map((r) => r.name),
-    ["global", "seo-ai-search"],
+    ["base", "seo-ai-search"],
   );
   assert.ok(PERSONAL_RULES.includes("mental"));
 });
@@ -167,11 +167,11 @@ test("skillsRemoveCommand builds remove invocation", () => {
 });
 
 test("manifest recordInstall / recordRemove round-trip", () => {
-  recordInstall("project", { rules: ["global"], skills: ["dissect"] }, { cwd });
+  recordInstall("project", { rules: ["base"], skills: ["dissect"] }, { cwd });
   const m = readManifest(projectManifestPath(cwd));
-  assert.deepEqual(m.rules, ["global"]);
+  assert.deepEqual(m.rules, ["base"]);
   assert.deepEqual(m.skills, ["dissect"]);
-  recordRemove("project", { rules: ["global"] }, { cwd });
+  recordRemove("project", { rules: ["base"] }, { cwd });
   const m2 = readManifest(projectManifestPath(cwd));
   assert.deepEqual(m2.rules, []);
   assert.deepEqual(m2.skills, ["dissect"]);
@@ -185,6 +185,6 @@ test("renderRulesBlock includes always-on body", () => {
 
 test("loadRules finds packaged rules including mental", () => {
   const rules = loadRules();
-  assert.ok(rules.some((r) => r.name === "global"));
+  assert.ok(rules.some((r) => r.name === "base"));
   assert.ok(rules.some((r) => r.name === "mental"));
 });
