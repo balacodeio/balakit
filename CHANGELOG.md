@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixes
+- `dissect` v2.2.0: in Cursor or Claude Plan Mode (or when the target is an existing plan file), patch the live plan in place — fix, tune, and append missed findings. Never full-file rewrite. Unaddressed sections stay verbatim.
+
 ## [v1.12.0]
 
 ### Changes

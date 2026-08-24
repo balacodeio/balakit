@@ -8,10 +8,11 @@ description: >-
   plan. Runs as a staged pipeline with human checkpoints and parallel read-only
   sub-agents so each investigation stays laser-focused. Use when the user invokes
   /dissect, or asks to audit / optimize / challenge / "tear apart" an existing
-  system, schema, or plan.
+  system, schema, or plan. If the session is in Cursor or Claude Plan Mode,
+  update the existing plan in place — never rewrite it.
 user-invocable: true
 disable-model-invocation: false
-version: "2.1.0"
+version: "2.2.0"
 author: "Ali Farahat"
 tags: ["dissect", "audit", "red-team", "minimal-build", "refactor", "ground-truth", "orchestration"]
 when_to_use: |
@@ -26,6 +27,9 @@ when_to_use: |
     components living in the wrong domain.
   - Before a migration or refactor, to find the minimal set of changes that
     actually meets the requirement.
+  - The session is in Cursor Plan Mode or Claude Plan Mode and the user wants
+    the current plan dissected, fixed, and tuned (gaps filled, errors corrected)
+    without replacing the document.
 
   DO NOT USE WHEN:
   - The thing does not exist yet and you are choosing an approach to BUILD. That is
@@ -39,7 +43,7 @@ when_to_use: |
 
 > **Leading words:** dissect, ground truth, entity-level, minimal-build,
 > red-team, evidence-backed, stub detection, naming audit, fold test,
-> phase separation.
+> phase separation, patch in place.
 
 Systematically interrogate and optimize an existing service, written plan, or
 system. The goal is not to rubber-stamp the current design — it is to arrive at
@@ -88,6 +92,13 @@ $ARGUMENTS
    the main context where all evidence is held together.
 9. **Escalate discrepancies, don't resolve them silently.** If code says X and the
    plan says Y, surface both at the checkpoint and let the human decide.
+10. **Patch in place — never rewrite the live plan.** If the session is in Cursor
+    Plan Mode or Claude Plan Mode, or the target is an existing plan document,
+    the source plan is the document of record. Dissect it, then surgically
+    update it (fix, tune, fill gaps). Never full-file `Write` it. Never create a
+    second plan that replaces it. Unaddressed sections stay verbatim. Read
+    [references/plan_preservation.md](references/plan_preservation.md) before
+    any write. Override only if the human explicitly asks to rewrite from scratch.
 
 ---
 
@@ -145,6 +156,12 @@ For every entity (table, field, service, component, endpoint) in scope:
 Return a table only (no verdicts):
   Entity | What name implies | What it actually contains | Mismatch?
 ```
+
+If the session is already in **Cursor Plan Mode** or **Claude Plan Mode** and
+the user did not name a different target, the target **is the current plan
+document**. Record its path. Read
+[references/plan_preservation.md](references/plan_preservation.md) now — before
+any write.
 
 ### 🛑 Checkpoint 1
 Present the naming table and your proposed scope boundary (what this target owns
@@ -292,11 +309,26 @@ first, what depends on what, what to defer.
 **6. Deferred / out of scope** — what is intentionally NOT changing, each with a
 reason.
 
+The six sections above are the **dissection report** (chat). They are not a
+replacement body for an existing plan file.
+
+### Plan Mode / existing plan document
+
+If the session is in Cursor or Claude Plan Mode, or the target is an existing
+plan file: do **not** emit a new plan. Follow
+[references/plan_preservation.md](references/plan_preservation.md). Build a
+patch map (`KEEP` / `PATCH` / `APPEND` / `FLAG`), apply surgical edits after
+Checkpoint 3, and preserve every unaddressed section. `APPEND` is how newly
+identified gaps land in the plan — they are added, not used as a reason to
+rewrite.
+
 ### 🛑 Checkpoint 3
-Present the plan led by a plain-terms summary (for the product owner) followed by
+Present the report led by a plain-terms summary (for the product owner) followed by
 the technical detail (for the engineer), with the recommended ToT branch and
-ranked alternatives. Ask the human which branch to execute. Do not start
-implementing unless they ask.
+ranked alternatives. If a live plan is being patched, also present the patch map.
+Ask the human which branch to execute (and, if patching, to confirm the map).
+Do not start implementing unless they ask. Do not touch the plan file until they
+confirm.
 
 ---
 
@@ -360,3 +392,4 @@ Quick reference:
 |---|---|
 | [references/verdict_taxonomy.md](references/verdict_taxonomy.md) | Full dynamic verdict taxonomy (KEEP/FOLD/DROP/DEFER/ON-DEMAND/EXTRACT/RE-HOME/REFACTOR/OUT-OF-SCOPE) with meanings, plan-vs-code typicals, distinctions, output format |
 | [references/fold_tests.md](references/fold_tests.md) | Fold-test table (cardinality → fold type → blocker), independent-relational-access check, PII/DB-boundary rule |
+| [references/plan_preservation.md](references/plan_preservation.md) | Plan Mode / existing plan file: patch in place, never rewrite. Detection, forbidden actions, patch map, host notes, worked example |
