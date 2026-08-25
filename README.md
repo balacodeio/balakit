@@ -29,16 +29,35 @@ npx balakit update
 npx balakit remove testing
 ```
 
-Mental continuity (the old `mental` rule/skill and `doctor`) now lives at
-[github.com/afaraha8403/mental](https://github.com/afaraha8403/mental). Leftover
-CLI flags print that URL and exit.
-
 Optional global install:
 
 ```bash
 npm install -g balakit
 balakit init
 ```
+
+## Mental (moved)
+
+Mental is a **standalone** local-first continuity layer. It is no longer a Balakit
+rule, skill, plugin, or CLI command.
+
+**New home:** [github.com/afaraha8403/mental](https://github.com/afaraha8403/mental)
+
+Install from that repo (Mental is not on npm yet):
+
+```bash
+git clone https://github.com/afaraha8403/mental.git
+cd mental
+node bin/cli.mjs install
+# or: npm link   then:  mental install
+```
+
+`mental install` copies the skill and a tiny always-on rule into your user agent
+dirs and creates a `~/.mental` skeleton. Existing `.mental/` journals were **not**
+deleted when Mental left Balakit.
+
+Leftover Balakit flags (`doctor`, `--personal`, `--mental-*`, `add mental`) print
+that URL and exit. Drop leftover kit wiring with `balakit remove mental`.
 
 Override skills targets with `--agents cursor,claude-code` or `--agents all`.
 Preview with `--dry-run`. `-y` skips confirms.

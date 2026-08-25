@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "balakit-engineering",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "Engineering workflow skills: authoring, deliberation, dissect, docs, release, and stealth browser fallback.",
   "author": {
     "name": "Ali Farahat",
