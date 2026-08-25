@@ -2,9 +2,7 @@
 /**
  * balakit — opinionated rules & skills kit installer.
  *
- * Rules install AGENTS.md-first (project) or to user config (Mental user-wide).
- * Skills are delegated to skills.sh. Mental data policy is chosen at install
- * (global exclude, clone exclude, repo gitignore, or tracked).
+ * Rules install AGENTS.md-first (project). Skills are delegated to skills.sh.
  */
 import { VERSION } from "./lib/pkg.mjs";
 import { isCliEntry } from "./lib/entry.mjs";
@@ -15,25 +13,6 @@ import { cmdRemove } from "./commands/remove.mjs";
 import { cmdList, cmdStatus, cmdUpdate, cmdDoctor } from "./commands/status.mjs";
 import { cmdInteractive } from "./commands/interactive.mjs";
 
-// Re-exports for tests
-export {
-  ensureMentalExcluded,
-  checkMentalExcluded,
-  resolveGlobalExcludesFile,
-  defaultExcludesFile,
-  expandHome,
-  runDoctor,
-  locateMentalIgnoreSources,
-  removeMentalIgnoreLine,
-} from "./lib/mental-exclude.mjs";
-export {
-  applyDataPolicy,
-  checkDataPolicy,
-  runPolicyDoctor,
-  liftMentalIgnores,
-  DEFAULT_MENTAL_DATA_POLICY,
-  DEFAULT_MENTAL_TOOLING,
-} from "./lib/mental-policy.mjs";
 export { renderRulesBlock, renderRepoStandingDocs, mergeManaged, removeManaged, demote } from "./lib/render.mjs";
 export { parseRule, skillDescription, bundledSkillsFor, loadRules, loadSkills } from "./lib/catalog.mjs";
 export {
@@ -73,9 +52,9 @@ export {
   projectManifestPath,
   globalManifestPath,
   migrateManifest,
-  resolveMentalPolicy,
 } from "./lib/manifest.mjs";
 export { buildInstallPlan, runInstallPlan, planSelection } from "./lib/install.mjs";
+export { MENTAL_MOVED, MENTAL_REPO } from "./lib/mental-moved.mjs";
 
 async function main() {
   let args;
@@ -83,7 +62,9 @@ async function main() {
     args = parseArgv(process.argv.slice(2));
   } catch (e) {
     console.error(e.message);
-    console.log("\n" + usage());
+    if (!String(e.message).includes("Mental has moved")) {
+      console.log("\n" + usage());
+    }
     process.exit(1);
   }
 
@@ -91,8 +72,6 @@ async function main() {
     agents: args.agents,
     dryRun: args.dryRun,
     yes: args.yes,
-    mentalTooling: args.mentalTooling,
-    mentalDataPolicy: args.mentalDataPolicy,
   };
 
   let code = 0;
@@ -107,21 +86,13 @@ async function main() {
       code = cmdList();
       break;
     case "doctor":
-      code = await cmdDoctor({
-        liftIgnore: args.liftIgnore,
-        yes: args.yes,
-        dryRun: args.dryRun,
-      });
+      code = cmdDoctor();
       break;
     case "status":
       code = cmdStatus();
       break;
     case "init":
-      code = await cmdInit({
-        ...common,
-        personal: args.personal,
-        withPersonal: args.withPersonal,
-      });
+      code = await cmdInit(common);
       break;
     case "add":
       code = await cmdAdd({ ...common, names: args.names });
@@ -133,11 +104,7 @@ async function main() {
       code = await cmdUpdate({ dryRun: args.dryRun, yes: args.yes, agents: args.agents });
       break;
     case null:
-      code = await cmdInteractive({
-        ...common,
-        personal: args.personal,
-        withPersonal: args.withPersonal,
-      });
+      code = await cmdInteractive(common);
       break;
     default:
       console.error(`Unknown command: ${args.command}`);

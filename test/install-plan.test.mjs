@@ -26,9 +26,8 @@ import {
   detectAgents,
   DEFAULT_AGENT_IDS,
   getCapability,
-  applyDataPolicy,
-  checkDataPolicy,
   BEGIN,
+  MENTAL_MOVED,
 } from "../bin/cli.mjs";
 import { loadRules } from "../bin/lib/catalog.mjs";
 import { hasManagedBlock } from "../bin/lib/render.mjs";
@@ -92,7 +91,6 @@ test("buildInstallPlan reconciles add with existing manifest (no AGENTS shrink)"
     agents: ["cursor"],
     reconcile: true,
     cwd,
-    home,
   });
 
   assert.ok(plan.team.some((r) => r.name === "base"));
@@ -115,35 +113,17 @@ test("migrateManifest renames legacy global rule to base", () => {
   assert.deepEqual(m.rules, ["base", "testing"]);
 });
 
-test("migrateManifest v1 mental → user + global-exclude", () => {
-  const m = migrateManifest({
-    rules: ["mental"],
-    skills: ["mental"],
-    updatedAt: "2026-01-01",
-    version: "1.9.1",
-  });
-  assert.equal(m.schema, MANIFEST_SCHEMA);
-  assert.equal(m.mentalTooling, "user");
-  assert.equal(m.mentalDataPolicy, "global-exclude");
+test("parseArgv rejects leftover Mental flags with moved message", () => {
+  assert.throws(() => parseArgv(["init", "--personal"]), /Mental has moved/);
+  assert.throws(() => parseArgv(["add", "mental"]), /Mental has moved/);
+  assert.throws(() => parseArgv(["doctor"]), /Mental has moved/);
+  assert.throws(() => parseArgv(["init", "--mental-tooling", "user"]), /Mental has moved/);
 });
 
-test("parseArgv rejects --personal on add", () => {
-  assert.throws(() => parseArgv(["add", "base", "--personal"]), /only apply/);
-});
-
-test("parseArgv accepts mental policy on init", () => {
-  const a = parseArgv([
-    "init",
-    "--personal",
-    "--mental-tooling",
-    "project",
-    "--mental-data",
-    "clone-exclude",
-    "-y",
-  ]);
-  assert.equal(a.command, "init");
-  assert.equal(a.mentalTooling, "project");
-  assert.equal(a.mentalDataPolicy, "clone-exclude");
+test("parseArgv still parses add of remaining rules", () => {
+  const a = parseArgv(["add", "base", "testing", "-y"]);
+  assert.equal(a.command, "add");
+  assert.deepEqual(a.names, ["base", "testing"]);
   assert.equal(a.yes, true);
 });
 
@@ -168,37 +148,15 @@ test("capability records separate rules confidence from skillsShId", () => {
   assert.equal(aider.agentSkills, "unsupported");
 });
 
-test("partitionRules puts mental in team when tooling is project", () => {
-  const mental = { name: "mental", always: true };
-  const { personal, team } = partitionRules([sampleAlways, mental], {
-    mentalTooling: "project",
-  });
+test("partitionRules treats every current rule as team (no personal kit)", () => {
+  const { personal, team } = partitionRules([sampleAlways, sampleScoped]);
   assert.equal(personal.length, 0);
-  assert.ok(team.some((r) => r.name === "mental"));
-});
-
-test("applyDataPolicy clone-exclude writes .git/info/exclude", () => {
-  const r = applyDataPolicy("clone-exclude", { cwd, home });
-  assert.equal(r.ok, true);
-  assert.ok(existsSync(r.file));
-  assert.match(readFileSync(r.file, "utf8"), /^\.mental\/$/m);
-  const check = checkDataPolicy("clone-exclude", { cwd, home });
-  assert.equal(check.ok, true);
-});
-
-test("applyDataPolicy repo-gitignore appends .gitignore", () => {
-  writeFileSync(join(cwd, ".gitignore"), "node_modules/\n");
-  const r = applyDataPolicy("repo-gitignore", { cwd, home });
-  assert.equal(r.ok, true);
-  const gi = readFileSync(join(cwd, ".gitignore"), "utf8");
-  assert.match(gi, /node_modules/);
-  assert.match(gi, /^\.mental\/$/m);
+  assert.equal(team.length, 2);
 });
 
 test("safe remove refuses wipe when manifest empty but block live", async () => {
   installTeamRules([sampleAlways], { cwd });
   assert.ok(hasManagedBlock(join(cwd, "AGENTS.md")));
-  // No manifest written
   const { cmdRemove } = await import("../bin/commands/remove.mjs");
   const code = await cmdRemove({ names: ["base"], yes: true, dryRun: false });
   assert.equal(code, 1);
@@ -206,28 +164,32 @@ test("safe remove refuses wipe when manifest empty but block live", async () => 
   assert.ok(readFileSync(join(cwd, "AGENTS.md"), "utf8").includes(BEGIN));
 });
 
-test("manifest records mental policy fields", () => {
+test("manifest round-trip without Mental policy machinery", () => {
   recordInstall(
-    "global",
+    "project",
     {
-      rules: ["mental"],
-      skills: ["mental"],
-      mentalTooling: "user",
-      mentalDataPolicy: "clone-exclude",
+      rules: ["base"],
+      skills: ["dissect"],
       agents: ["cursor"],
-      surfaces: ["~/.claude/CLAUDE.md"],
+      surfaces: ["AGENTS.md"],
     },
     { cwd, home },
   );
-  const m = readManifest(join(home, ".balakit", "installed.json"));
+  const m = readManifest(projectManifestPath(cwd));
   assert.equal(m.schema, MANIFEST_SCHEMA);
-  assert.equal(m.mentalTooling, "user");
-  assert.equal(m.mentalDataPolicy, "clone-exclude");
-  assert.deepEqual(m.agents, ["cursor"]);
+  assert.deepEqual(m.rules, ["base"]);
+  assert.deepEqual(m.skills, ["dissect"]);
+  assert.equal(m.mentalTooling, null);
+  assert.equal(m.mentalDataPolicy, null);
 });
 
-test("loadRules still includes packaged catalog", () => {
+test("loadRules no longer includes mental", () => {
   const rules = loadRules();
-  assert.ok(rules.some((r) => r.name === "mental"));
+  assert.ok(rules.some((r) => r.name === "base"));
+  assert.ok(!rules.some((r) => r.name === "mental"));
   assert.ok(projectManifestPath(cwd).includes(".balakit"));
+});
+
+test("MENTAL_MOVED is exported for leftover CLI surfaces", () => {
+  assert.match(MENTAL_MOVED, /github\.com\/.*\/mental/);
 });

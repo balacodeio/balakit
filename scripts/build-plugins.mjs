@@ -207,12 +207,6 @@ function buildPlugin(plugin) {
     plugin.skills.length ? `**Skills:** ${plugin.skills.join(", ")}` : null,
     "",
   ];
-  if (plugin.name === "balakit-mental") {
-    readmeLines.push(
-      "Mental data-policy / `balakit doctor` remain CLI concerns and are not part of this plugin.",
-      "",
-    );
-  }
   writeFileSync(join(pluginRoot, "README.md"), readmeLines.filter((line) => line !== null).join("\n"));
 }
 
@@ -282,7 +276,7 @@ export function buildPlugins() {
       "Regenerate: `node scripts/build-plugins.mjs` (also run by `./sync.sh`).",
       "",
       "The `balakit` CLI continues to install rules into `AGENTS.md` / `CLAUDE.md` and",
-      "skills via skills.sh for multi-agent setups. Plugins do not replace Mental data policy.",
+      "skills via skills.sh for multi-agent setups.",
       "",
     ].join("\n"),
   );

@@ -3,18 +3,11 @@
  *
  * Project: `.balakit/installed.json`
  * Personal/global: `~/.balakit/installed.json`
- *
- * Schema v2 adds tooling/data policy and surfaces; v1 manifests migrate
- * conservatively to user-wide + global-exclude when Mental is present.
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
-import { VERSION, MANIFEST_SCHEMA, PERSONAL_RULES, canonicalizeRuleNames } from "./pkg.mjs";
-import {
-  DEFAULT_MENTAL_DATA_POLICY,
-  DEFAULT_MENTAL_TOOLING,
-} from "./mental-policy.mjs";
+import { VERSION, MANIFEST_SCHEMA, canonicalizeRuleNames } from "./pkg.mjs";
 
 /**
  * @typedef {{
@@ -46,33 +39,22 @@ function empty() {
 }
 
 /**
- * Migrate a raw JSON object to Manifest v2.
- * Old manifests with mental and no policy → user + global-exclude.
+ * Normalize a raw JSON object to the current Manifest schema.
+ * Legacy Mental policy fields are preserved when present so old files stay readable.
  * @param {object} data
  * @returns {Manifest}
  */
 export function migrateManifest(data) {
   const rules = canonicalizeRuleNames(Array.isArray(data.rules) ? data.rules : []);
   const skills = Array.isArray(data.skills) ? data.skills : [];
-  const hasMental =
-    rules.some((r) => PERSONAL_RULES.includes(r)) || skills.includes("mental");
-  const schema = typeof data.schema === "number" ? data.schema : 1;
-
-  let mentalTooling = data.mentalTooling ?? null;
-  let mentalDataPolicy = data.mentalDataPolicy ?? null;
-  if (hasMental && schema < 2) {
-    mentalTooling = mentalTooling || DEFAULT_MENTAL_TOOLING;
-    mentalDataPolicy = mentalDataPolicy || DEFAULT_MENTAL_DATA_POLICY;
-  }
-
   return {
     schema: MANIFEST_SCHEMA,
     rules,
     skills,
     agents: Array.isArray(data.agents) ? data.agents : [],
     surfaces: Array.isArray(data.surfaces) ? data.surfaces : [],
-    mentalTooling,
-    mentalDataPolicy,
+    mentalTooling: data.mentalTooling ?? null,
+    mentalDataPolicy: data.mentalDataPolicy ?? null,
     updatedAt: data.updatedAt ?? "",
     version: data.version ?? "",
   };
@@ -124,16 +106,8 @@ export function writeManifest(file, data) {
 }
 
 /**
- * Merge names / policy into a manifest file.
+ * Merge names into a manifest file.
  * @param {"project"|"global"} scope
- * @param {{
- *   rules?: string[],
- *   skills?: string[],
- *   agents?: string[],
- *   surfaces?: string[],
- *   mentalTooling?: string|null,
- *   mentalDataPolicy?: string|null,
- * }} patch
  */
 export function recordInstall(scope, patch, { cwd = process.cwd(), home = homedir(), dryRun = false } = {}) {
   const file = scope === "global" ? globalManifestPath(home) : projectManifestPath(cwd);
@@ -143,10 +117,8 @@ export function recordInstall(scope, patch, { cwd = process.cwd(), home = homedi
     skills: [...cur.skills, ...(patch.skills ?? [])],
     agents: [...(cur.agents ?? []), ...(patch.agents ?? [])],
     surfaces: [...(cur.surfaces ?? []), ...(patch.surfaces ?? [])],
-    mentalTooling:
-      patch.mentalTooling !== undefined ? patch.mentalTooling : cur.mentalTooling,
-    mentalDataPolicy:
-      patch.mentalDataPolicy !== undefined ? patch.mentalDataPolicy : cur.mentalDataPolicy,
+    mentalTooling: cur.mentalTooling,
+    mentalDataPolicy: cur.mentalDataPolicy,
   };
   if (dryRun) return { file, ...next };
   return { file, ...writeManifest(file, next) };
@@ -155,7 +127,6 @@ export function recordInstall(scope, patch, { cwd = process.cwd(), home = homedi
 /**
  * Remove names from a manifest file.
  * @param {"project"|"global"} scope
- * @param {{ rules?: string[], skills?: string[] }} names
  */
 export function recordRemove(scope, names, { cwd = process.cwd(), home = homedir(), dryRun = false } = {}) {
   const file = scope === "global" ? globalManifestPath(home) : projectManifestPath(cwd);
@@ -164,8 +135,7 @@ export function recordRemove(scope, names, { cwd = process.cwd(), home = homedir
   const dropS = new Set(names.skills ?? []);
   const nextRules = cur.rules.filter((r) => !dropR.has(r));
   const nextSkills = cur.skills.filter((s) => !dropS.has(s));
-  const stillMental =
-    nextRules.some((r) => PERSONAL_RULES.includes(r)) || nextSkills.includes("mental");
+  const stillMental = nextRules.includes("mental") || nextSkills.includes("mental");
   const next = {
     rules: nextRules,
     skills: nextSkills,
@@ -177,20 +147,4 @@ export function recordRemove(scope, names, { cwd = process.cwd(), home = homedir
   if (dryRun) return { file, ...next };
   if (!existsSync(file) && !cur.rules.length && !cur.skills.length) return { file, ...next };
   return { file, ...writeManifest(file, next) };
-}
-
-/**
- * Resolve Mental policy from project then global manifest (legacy default).
- * @param {{ cwd?: string, home?: string }} [opts]
- */
-export function resolveMentalPolicy({ cwd = process.cwd(), home = homedir() } = {}) {
-  const proj = readManifest(projectManifestPath(cwd));
-  const glob = readManifest(globalManifestPath(home));
-  const tooling = proj.mentalTooling || glob.mentalTooling || DEFAULT_MENTAL_TOOLING;
-  const dataPolicy =
-    proj.mentalDataPolicy || glob.mentalDataPolicy || DEFAULT_MENTAL_DATA_POLICY;
-  const hasMental =
-    [...proj.rules, ...glob.rules].some((r) => PERSONAL_RULES.includes(r)) ||
-    [...proj.skills, ...glob.skills].includes("mental");
-  return { tooling, dataPolicy, hasMental, project: proj, global: glob };
 }

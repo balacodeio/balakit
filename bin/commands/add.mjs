@@ -5,11 +5,6 @@ import * as p from "@clack/prompts";
 import { CMD, VERSION, canonicalizeRuleName } from "../lib/pkg.mjs";
 import { loadRules, loadSkills } from "../lib/catalog.mjs";
 import { buildInstallPlan, runInstallPlan } from "../lib/install.mjs";
-import {
-  DEFAULT_MENTAL_TOOLING,
-  DEFAULT_MENTAL_DATA_POLICY,
-} from "../lib/mental-policy.mjs";
-import { resolveMentalPolicy } from "../lib/manifest.mjs";
 
 /**
  * @param {{
@@ -17,8 +12,6 @@ import { resolveMentalPolicy } from "../lib/manifest.mjs";
  *   agents?: string[],
  *   dryRun?: boolean,
  *   yes?: boolean,
- *   mentalTooling?: string,
- *   mentalDataPolicy?: string,
  * }} opts
  */
 export async function cmdAdd(opts) {
@@ -44,16 +37,6 @@ export async function cmdAdd(opts) {
     }
   }
 
-  const existing = resolveMentalPolicy();
-  const wantsMental =
-    ruleNames.includes("mental") || skillNames.includes("mental");
-  const mentalTooling =
-    opts.mentalTooling ??
-    (existing.hasMental ? existing.tooling : DEFAULT_MENTAL_TOOLING);
-  const mentalDataPolicy =
-    opts.mentalDataPolicy ??
-    (existing.hasMental || wantsMental ? existing.dataPolicy || DEFAULT_MENTAL_DATA_POLICY : DEFAULT_MENTAL_DATA_POLICY);
-
   p.intro(`${CMD} v${VERSION} — add${opts.dryRun ? "  [dry-run]" : ""}`);
 
   const plan = buildInstallPlan({
@@ -61,8 +44,6 @@ export async function cmdAdd(opts) {
     skillNames,
     allRules,
     agents: opts.agents,
-    mentalTooling: wantsMental || existing.hasMental ? mentalTooling : DEFAULT_MENTAL_TOOLING,
-    mentalDataPolicy,
     reconcile: true,
   });
 

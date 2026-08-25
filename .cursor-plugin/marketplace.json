@@ -23,19 +23,6 @@
       ]
     },
     {
-      "name": "balakit-mental",
-      "source": "balakit-mental",
-      "description": "Project continuity layer: mental rule + skill for decisions, handoffs, and resume points.",
-      "version": "1.12.0",
-      "keywords": [
-        "mental",
-        "continuity",
-        "journal",
-        "handoff",
-        "balakit"
-      ]
-    },
-    {
       "name": "balakit-seo",
       "source": "balakit-seo",
       "description": "SEO and AI-search: scoped seo-ai-search rule plus everything-seo and seo-audit skills.",

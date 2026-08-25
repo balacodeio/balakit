@@ -5,9 +5,7 @@
  *   - Always-on → managed block in AGENTS.md + CLAUDE.md
  *   - Scoped (globs) → `.cursor/rules/<name>.mdc` (+ listed in the managed block)
  *
- * Mental rules follow tooling scope:
- *   - user → ~/.claude/CLAUDE.md + ~/.codex/AGENTS.md + ~/.cursor/rules/
- *   - project → included in AGENTS.md / CLAUDE.md (collaborators see the wiring)
+ * Personal-layer rules (none ship today) install user-wide when PERSONAL_RULES is non-empty.
  */
 import { writeFileSync, mkdirSync, unlinkSync, existsSync } from "node:fs";
 import { join, sep } from "node:path";
@@ -17,14 +15,10 @@ import { mergeManaged, removeManaged, renderRulesBlock, hasManagedBlock, rel } f
 
 /**
  * Split a rule list into personal vs team by name list (defaults to PERSONAL_RULES).
- * When mental tooling is project-scoped, mental is treated as team.
  * @param {Array<{name: string}>} rules
- * @param {{ mentalTooling?: "user"|"project" }} [opts]
  */
-export function partitionRules(rules, { mentalTooling = "user" } = {}) {
-  const personalNames = new Set(
-    mentalTooling === "project" ? [] : PERSONAL_RULES,
-  );
+export function partitionRules(rules) {
+  const personalNames = new Set(PERSONAL_RULES);
   const personal = rules.filter((r) => personalNames.has(r.name));
   const team = rules.filter((r) => !personalNames.has(r.name));
   return { personal, team };

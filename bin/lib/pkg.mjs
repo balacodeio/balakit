@@ -35,13 +35,13 @@ export const SKILLS_DIR = join(PKG_ROOT, "skills");
  * Rule → skills that must ship with it. The rule is the always-on pointer; the
  * skill carries the procedure. Selecting the rule always installs the skill.
  */
-export const RULE_BUNDLED_SKILLS = { mental: ["mental"] };
+export const RULE_BUNDLED_SKILLS = {};
 
 /**
- * Rules that participate in the Mental role (rule + skill + data policy).
- * Tooling scope is chosen at install time (user-wide or project).
+ * Names that install user-wide instead of into the project.
+ * Empty: Balakit no longer ships a personal continuity rule (Mental moved out).
  */
-export const PERSONAL_RULES = ["mental"];
+export const PERSONAL_RULES = [];
 
 /**
  * Rule name aliases → canonical basenames. Keeps old CLI/manifest names working

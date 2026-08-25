@@ -8,32 +8,30 @@ capability-aware kit: standing rules land **AGENTS.md-first** (plus `CLAUDE.md`
 and Cursor `.mdc` when needed); skills go through
 [skills.sh](https://skills.sh/). The same kit is also packaged as **domain
 plugins** ([Agent Plugins](https://agent-plugins.org) + Cursor marketplace) so
-each capability group can install separately. Mental continuity tooling and
-`.mental/` data policy are chosen explicitly.
+each capability group can install separately.
 
 > Take what you like, ignore the rest: meta-principle, simplicity ladder,
-> changelog/testing/comments discipline, SEO guardrails, and a `.mental/`
-> project-continuity layer.
+> changelog/testing/comments discipline, and SEO guardrails.
 
 ## Quick start
 
 ```bash
 npx balakit                 # guided setup: plan → review → apply
 npx balakit init            # same guided flow
-npx balakit init --personal -y --mental-data global-exclude
-npx balakit init --with-personal -y
+npx balakit init -y         # non-interactive team kit
 ```
 
 ```bash
 npx balakit add base testing
-npx balakit add mental --mental-tooling user --mental-data clone-exclude
 npx balakit list            # rules, skills, capability matrix
 npx balakit status
 npx balakit update
 npx balakit remove testing
-npx balakit doctor          # mode-aware Mental data-policy check/repair
-npx balakit doctor --lift-ignore   # explicit unignore for tracked mode (confirm required)
 ```
+
+Mental continuity (the old `mental` rule/skill and `doctor`) now lives at
+[github.com/afaraha8403/mental](https://github.com/afaraha8403/mental). Leftover
+CLI flags print that URL and exit.
 
 Optional global install:
 
@@ -43,18 +41,15 @@ balakit init
 ```
 
 Override skills targets with `--agents cursor,claude-code` or `--agents all`.
-Preview with `--dry-run`. `-y` skips safe confirms; it **cannot** silently accept
-`tracked` or `repo-gitignore` Mental data policies, and **cannot** combine with
-`--lift-ignore` (lifting ignore lines always needs an interactive confirm).
+Preview with `--dry-run`. `-y` skips confirms.
 
 ### Guided setup
 
 `npx balakit` (and `init` without `-y`) walks:
 
-1. **Intent** — project standing rules, Mental continuity, both, or advanced cherry-pick
+1. **Intent** — project standing rules, or advanced cherry-pick
 2. **Tools** — detected agents as hints; confirm skills targets
-3. **Mental choices** (when selected) — tooling scope + data policy, with consequences
-4. **Review** — exact destinations → apply
+3. **Review** — exact destinations → apply
 
 ## What gets installed
 
@@ -71,24 +66,6 @@ Default team rules: `base`, `testing`, `comments`, `changelog`.
 `add` **reconciles** with the project manifest so later adds never shrink the
 managed block.
 
-### Mental role (`mental` rule + skill)
-
-Two independent choices:
-
-| Axis | Options |
-| --- | --- |
-| **Tooling scope** | `user` (default) — `~/.claude`, `~/.codex`, `~/.cursor/rules` + skills `-g`; `project` — wiring in this repo (collaborators see it) |
-| **Data policy** | `global-exclude` (default) · `clone-exclude` (`.git/info/exclude`) · `repo-gitignore` · `tracked` (no privacy promise) |
-
-Flags: `--mental-tooling user|project` and
-`--mental-data global-exclude|clone-exclude|repo-gitignore|tracked`.
-
-The data folder `.mental/` is **per-repo** (created by the agent on first
-substantive work when policy allows). Remove never deletes `.mental/` data and
-never silently removes ignore lines. If you choose `tracked` while a global (or
-other) `.mental/` exclude still exists, Balakit reports the sources and offers
-`doctor --lift-ignore` — it will not auto-strip a global exclude under `-y`.
-
 ### Skills
 
 Delegated to skills.sh (path maps stay theirs):
@@ -99,10 +76,10 @@ npx skills add balacodeio/balakit -g
 npx skills add balacodeio/balakit --skill dissect
 ```
 
-`balakit add <skill>` runs the equivalent. The `mental` rule always brings the
-`mental` skill. Skills failures exit non-zero (partial state is reported).
-Only skills.sh agent ids on Balakit’s verified allowlist are passed as `-a`
-(refresh via live `npx skills` smoke when adding a new target).
+`balakit add <skill>` runs the equivalent. Skills failures exit non-zero
+(partial state is reported). Only skills.sh agent ids on Balakit’s verified
+allowlist are passed as `-a` (refresh via live `npx skills` smoke when adding a
+new target).
 
 ### Domain plugins (Agent Plugins / Cursor)
 
@@ -113,7 +90,6 @@ installable domain plugins under `plugins/` plus
 | Plugin | Ships | Format |
 | --- | --- | --- |
 | `balakit-core` | rules: `base`, `testing`, `comments`, `changelog` | Cursor Plugin |
-| `balakit-mental` | `mental` rule + skill | Cursor Plugin |
 | `balakit-seo` | `seo-ai-search` rule + `everything-seo`, `seo-audit` | Cursor Plugin |
 | `balakit-marketing` | `marketing-psychology`, `startup-marketing-brain` | Agent Plugins + Cursor |
 | `balakit-media` | `media-gen` | Agent Plugins + Cursor |
@@ -123,7 +99,7 @@ installable domain plugins under `plugins/` plus
 Skills-only plugins include a root `plugin.json` conforming to
 [Agent Plugins](https://agent-plugins.org) v1.0.0. Plugins that include rules use
 Cursor’s `.cursor-plugin/plugin.json` (rules are outside the portable v1
-component set). Mental **data policy** / `balakit doctor` stay CLI-only.
+component set).
 
 See `plugins/README.md`. Regenerate with `node scripts/build-plugins.mjs`.
 
@@ -149,26 +125,12 @@ is a recommendation only.
 
 ```bash
 npx balakit update          # refresh everything recorded in manifests
-npx balakit remove mental   # drops wiring + skill; keeps data policy ignores
-npx balakit status          # manifests, managed blocks, Mental policy, matrix
+npx balakit remove testing
+npx balakit status          # manifests, managed blocks, capability matrix
 ```
 
 Ownership: `.balakit/installed.json` (project) and `~/.balakit/installed.json`
-(user). Schema v2 records agents, surfaces, Mental tooling scope, and data
-policy. Older manifests migrate to `user` + `global-exclude` when Mental is
-present.
-
-## The `.mental/` continuity layer
-
-`mental` (rule + skill) teaches agents to maintain a per-repo continuity log at
-`.mental/`. Preflight respects the **recorded data policy**: private modes
-require `git check-ignore`; tracked mode does not.
-
-```bash
-npx balakit doctor                 # verify / repair for the recorded policy
-npx balakit doctor --lift-ignore   # remove discovered .mental/ ignore lines (confirm)
-npx balakit doctor --lift-ignore --dry-run   # preview only
-```
+(user). Schema v2 records agents and surfaces. Older manifests still load.
 
 ## Rules
 
@@ -177,7 +139,6 @@ npx balakit doctor --lift-ignore --dry-run   # preview only
 | `base` | Meta-principle, dual-mode communication, simplicity ladder, repo hygiene |
 | `changelog` | Changelog maintenance (grouped Features / Fixes / Changes) |
 | `comments` | Comments and JSDoc standards |
-| `mental` | Continuity layer — choose tooling scope + data policy; bundles `mental` skill |
 | `seo-ai-search` | SEO + AI-search implementation (file-scoped → Cursor `.mdc`) |
 | `testing` | Testing philosophy |
 
@@ -193,7 +154,6 @@ npx balakit doctor --lift-ignore --dry-run   # preview only
 | `everything-seo` | Comprehensive SEO playbook |
 | `marketing-psychology` | Psychology for product and marketing copy |
 | `media-gen` | Fal.ai image, video, and upscale generation with dual-model ad creative workflow |
-| `mental` | Project continuity: decisions, outcomes, and exact handoffs |
 | `nlm-skill` | NotebookLM CLI (`nlm`) and MCP server expert |
 | `release-deploy` | GitHub tag releases: main→production, staging→beta; changelog-driven notes |
 | `seo-audit` | SEO audit workflow |
@@ -203,7 +163,7 @@ npx balakit doctor --lift-ignore --dry-run   # preview only
 
 ```text
 bin/cli.mjs                 # entry — routes to commands/
-bin/lib/                    # catalog, plan, capability registry, mental policy, …
+bin/lib/                    # catalog, plan, capability registry, …
 bin/commands/               # init, add, remove, status, interactive, …
 skills/<name>/SKILL.md      # source of truth (skills.sh discovery)
 rules/<name>.mdc            # source of truth for rules

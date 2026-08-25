@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changes
+- Mental continuity has moved out of Balakit. The `mental` rule/skill, data-policy flags, and `doctor` ignore repair no longer ship here — use https://github.com/afaraha8403/mental. Leftover Balakit CLI flags print that URL and exit. Existing `.mental/` journals are not deleted.
+
 ### Fixes
 - `dissect` v2.2.0: in Cursor or Claude Plan Mode (or when the target is an existing plan file), patch the live plan in place — fix, tune, and append missed findings. Never full-file rewrite. Unaddressed sections stay verbatim.
 

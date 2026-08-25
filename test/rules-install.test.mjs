@@ -65,26 +65,23 @@ const sampleScoped = {
   raw: "---\nglobs: \"**/*.{astro,ts}\"\nalwaysApply: false\n---\n# SEO\n\nShip meta tags.\n",
 };
 
-const sampleMental = {
-  name: "mental",
+const sampleNotes = {
+  name: "notes",
   always: true,
   globs: "",
-  description: "second brain",
-  body: "# Mental\n\nUse the mental skill.",
-  raw: "---\nalwaysApply: true\n---\n# Mental\n\nUse the mental skill.\n",
+  description: "dummy personal",
+  body: "# Notes\n\nKeep notes.",
+  raw: "---\nalwaysApply: true\n---\n# Notes\n\nKeep notes.\n",
 };
 
-test("partitionRules splits personal from team", () => {
-  const { personal, team } = partitionRules([sampleAlways, sampleMental, sampleScoped]);
-  assert.deepEqual(
-    personal.map((r) => r.name),
-    ["mental"],
-  );
+test("partitionRules puts all catalog rules on the team side", () => {
+  const { personal, team } = partitionRules([sampleAlways, sampleScoped]);
+  assert.deepEqual(personal, []);
   assert.deepEqual(
     team.map((r) => r.name),
     ["base", "seo-ai-search"],
   );
-  assert.ok(PERSONAL_RULES.includes("mental"));
+  assert.equal(PERSONAL_RULES.length, 0);
 });
 
 test("installTeamRules writes AGENTS.md + CLAUDE.md managed blocks", () => {
@@ -134,24 +131,23 @@ test("removeTeamRules rewrites remaining rules", () => {
 });
 
 test("installPersonalRules writes user-level targets", () => {
-  const { written } = installPersonalRules([sampleMental], { home });
+  const { written } = installPersonalRules([sampleNotes], { home });
   assert.ok(written.some((w) => w.includes(".claude")));
-  assert.ok(existsSync(join(home, ".cursor", "rules", "mental.mdc")));
+  assert.ok(existsSync(join(home, ".cursor", "rules", "notes.mdc")));
   assert.ok(hasManagedBlock(join(home, ".claude", "CLAUDE.md")));
   assert.ok(hasManagedBlock(join(home, ".codex", "AGENTS.md")));
 });
 
-test("removePersonalRules clears global mental files", () => {
-  installPersonalRules([sampleMental], { home });
-  removePersonalRules([sampleMental], [], { home });
-  assert.equal(existsSync(join(home, ".cursor", "rules", "mental.mdc")), false);
+test("removePersonalRules clears global dummy files", () => {
+  installPersonalRules([sampleNotes], { home });
+  removePersonalRules([sampleNotes], [], { home });
+  assert.equal(existsSync(join(home, ".cursor", "rules", "notes.mdc")), false);
   assert.equal(hasManagedBlock(join(home, ".claude", "CLAUDE.md")), false);
 });
 
 test("skillsAddCommand includes -g for global and skill flags", () => {
-  const cmd = skillsAddCommand(["mental", "dissect"], ["cursor", "claude-code"], "global");
+  const cmd = skillsAddCommand(["dissect"], ["cursor", "claude-code"], "global");
   assert.match(cmd, /npx -y skills add/);
-  assert.match(cmd, /-s mental/);
   assert.match(cmd, /-s dissect/);
   assert.match(cmd, /-a cursor/);
   assert.match(cmd, /-a claude-code/);
@@ -160,9 +156,9 @@ test("skillsAddCommand includes -g for global and skill flags", () => {
 });
 
 test("skillsRemoveCommand builds remove invocation", () => {
-  const cmd = skillsRemoveCommand(["mental"], "global");
+  const cmd = skillsRemoveCommand(["dissect"], "global");
   assert.match(cmd, /skills remove/);
-  assert.match(cmd, /mental/);
+  assert.match(cmd, /dissect/);
   assert.match(cmd, /-g/);
 });
 
@@ -183,8 +179,8 @@ test("renderRulesBlock includes always-on body", () => {
   assert.match(md, /Opinionated Rules/);
 });
 
-test("loadRules finds packaged rules including mental", () => {
+test("loadRules finds packaged rules and excludes mental", () => {
   const rules = loadRules();
   assert.ok(rules.some((r) => r.name === "base"));
-  assert.ok(rules.some((r) => r.name === "mental"));
+  assert.ok(!rules.some((r) => r.name === "mental"));
 });

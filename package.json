@@ -1,7 +1,7 @@
 {
   "name": "balakit",
   "version": "1.12.0",
-  "description": "Opinionated rules and skills kit for AI coding agents — guided capability-aware install, AGENTS.md-first rules, skills via skills.sh, domain Agent/Cursor plugins, flexible Mental continuity layer.",
+  "description": "Opinionated rules and skills kit for AI coding agents — guided capability-aware install, AGENTS.md-first rules, skills via skills.sh, domain Agent/Cursor plugins.",
   "license": "MIT",
   "homepage": "https://github.com/balacodeio/balakit#readme",
   "repository": {

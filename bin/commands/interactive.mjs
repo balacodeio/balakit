@@ -1,5 +1,5 @@
 /**
- * Guided setup: intent → tools → kit → Mental choices → review → apply.
+ * Guided setup: intent → tools → kit → review → apply.
  */
 import * as p from "@clack/prompts";
 import { CMD, VERSION, TEAM_INIT_RULES, SKILL_BUNDLED_BY } from "../lib/pkg.mjs";
@@ -10,22 +10,12 @@ import {
   describeSelectedTools,
 } from "../lib/install.mjs";
 import { detectAgents, AGENT_IDS, getCapability } from "../lib/agents.mjs";
-import {
-  DEFAULT_MENTAL_TOOLING,
-  DEFAULT_MENTAL_DATA_POLICY,
-  describeDataPolicy,
-  describeToolingScope,
-} from "../lib/mental-policy.mjs";
 
 /**
  * @param {{
  *   agents?: string[],
  *   dryRun?: boolean,
  *   yes?: boolean,
- *   personal?: boolean,
- *   withPersonal?: boolean,
- *   mentalTooling?: string,
- *   mentalDataPolicy?: string,
  * }} opts
  */
 export async function cmdInteractive(opts = {}) {
@@ -35,9 +25,7 @@ export async function cmdInteractive(opts = {}) {
   p.intro(`${CMD} v${VERSION} — guided setup${opts.dryRun ? "  [dry-run]" : ""}`);
 
   let intent = null;
-  if (opts.personal && !opts.withPersonal) intent = "personal";
-  else if (opts.withPersonal) intent = "both";
-  else if (opts.yes && !opts.personal) intent = "team";
+  if (opts.yes) intent = "team";
 
   if (!intent) {
     const picked = await p.select({
@@ -47,16 +35,6 @@ export async function cmdInteractive(opts = {}) {
           value: "team",
           label: "Project standing rules",
           hint: `${TEAM_INIT_RULES.join(", ")} → AGENTS.md + CLAUDE.md`,
-        },
-        {
-          value: "personal",
-          label: "Mental continuity",
-          hint: "rule + skill + choose where tooling lives and how .mental/ is handled",
-        },
-        {
-          value: "both",
-          label: "Project rules + Mental",
-          hint: "standing rules for the repo, then Mental choices",
         },
         {
           value: "advanced",
@@ -72,7 +50,6 @@ export async function cmdInteractive(opts = {}) {
     intent = picked;
   }
 
-  // Tools: detect, then confirm (unless --agents or -y with detect)
   let agentIds = opts.agents?.length ? opts.agents : detectAgents();
   if (!opts.agents?.length && !opts.yes) {
     const confirmed = await p.multiselect({
@@ -100,11 +77,8 @@ export async function cmdInteractive(opts = {}) {
   let ruleNames = [];
   let skillNames = [];
 
-  if (intent === "team" || intent === "both") {
+  if (intent === "team") {
     ruleNames = TEAM_INIT_RULES.filter((n) => allRules.some((r) => r.name === n));
-  }
-  if (intent === "personal" || intent === "both") {
-    ruleNames = [...new Set([...ruleNames, "mental"])];
   }
   if (intent === "advanced") {
     const picked = await p.groupMultiselect({
@@ -133,79 +107,11 @@ export async function cmdInteractive(opts = {}) {
     skillNames = picked.filter((v) => v.startsWith("skill:")).map((v) => v.slice(6));
   }
 
-  const wantsMental =
-    ruleNames.includes("mental") || skillNames.includes("mental") || intent === "personal";
-
-  let mentalTooling = opts.mentalTooling ?? DEFAULT_MENTAL_TOOLING;
-  let mentalDataPolicy = opts.mentalDataPolicy ?? DEFAULT_MENTAL_DATA_POLICY;
-
-  if (wantsMental && !opts.mentalTooling && !opts.yes) {
-    const scope = await p.select({
-      message: "Where should Mental tooling (rule + skill) live?",
-      options: [
-        {
-          value: "user",
-          label: "User-wide (recommended)",
-          hint: describeToolingScope("user"),
-        },
-        {
-          value: "project",
-          label: "This project only",
-          hint: describeToolingScope("project"),
-        },
-      ],
-    });
-    if (p.isCancel(scope)) {
-      p.cancel("Cancelled.");
-      return 1;
-    }
-    mentalTooling = scope;
-  }
-
-  if (wantsMental && !opts.mentalDataPolicy && !opts.yes) {
-    const data = await p.select({
-      message: "How should `.mental/` data be handled in git?",
-      options: [
-        {
-          value: "global-exclude",
-          label: "Private on this machine (recommended)",
-          hint: describeDataPolicy("global-exclude"),
-        },
-        {
-          value: "clone-exclude",
-          label: "Private in this clone",
-          hint: describeDataPolicy("clone-exclude"),
-        },
-        {
-          value: "repo-gitignore",
-          label: "Private via repo .gitignore",
-          hint: describeDataPolicy("repo-gitignore"),
-        },
-        {
-          value: "tracked",
-          label: "Shared / tracked (no privacy)",
-          hint: describeDataPolicy("tracked"),
-        },
-      ],
-    });
-    if (p.isCancel(data)) {
-      p.cancel("Cancelled.");
-      return 1;
-    }
-    mentalDataPolicy = data;
-  }
-
-  if (wantsMental) {
-    ruleNames = [...new Set([...ruleNames, "mental"])];
-  }
-
   const plan = buildInstallPlan({
     ruleNames,
     skillNames,
     allRules,
     agents: agentIds,
-    mentalTooling,
-    mentalDataPolicy,
   });
 
   if (plan.bundled.length) {

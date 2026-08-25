@@ -33,15 +33,6 @@ export const PLUGINS = [
     skills: [],
   },
   {
-    name: "balakit-mental",
-    description:
-      "Project continuity layer: mental rule + skill for decisions, handoffs, and resume points.",
-    keywords: ["mental", "continuity", "journal", "handoff", "balakit"],
-    format: "cursor",
-    rules: ["mental"],
-    skills: ["mental"],
-  },
-  {
     name: "balakit-seo",
     description:
       "SEO and AI-search: scoped seo-ai-search rule plus everything-seo and seo-audit skills.",
