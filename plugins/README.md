@@ -5,7 +5,7 @@ Each plugin installs separately (Cursor marketplace or Agent Plugins clients).
 
 | Plugin | Format | Rules | Skills |
 | --- | --- | --- | --- |
-| `balakit-core` | Cursor Plugin | base, testing, comments, changelog | — |
+| `balakit-core` | Cursor Plugin | base, testing, comments, changelog, release | — |
 | `balakit-seo` | Cursor Plugin | seo-ai-search | — |
 | `balakit-seo-skills` | Agent Plugins + Cursor | — | everything-seo, seo-audit |
 | `balakit-marketing` | Agent Plugins + Cursor | — | marketing-psychology, startup-marketing-brain |

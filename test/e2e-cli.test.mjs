@@ -101,7 +101,7 @@ test("e2e: project init writes AGENTS.md, always-on .mdc, and project manifest â
   assert.ok(existsSync(join(cwd, "AGENTS.md")));
   assert.ok(existsSync(join(cwd, "CLAUDE.md")));
   assert.match(readFileSync(join(cwd, "AGENTS.md"), "utf8"), /Meta-Principle/);
-  for (const name of ["base", "testing", "comments", "changelog"]) {
+  for (const name of ["base", "testing", "comments", "changelog", "release"]) {
     assert.ok(existsSync(join(cwd, ".cursor", "rules", `${name}.mdc`)), name);
   }
 

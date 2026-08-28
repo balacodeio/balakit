@@ -13,7 +13,7 @@
     {
       "name": "balakit-core",
       "source": "balakit-core",
-      "description": "Standing project rules: meta-principle, testing, comments, and changelog discipline.",
+      "description": "Standing project rules: meta-principle, testing, comments, changelog, and release version lockstep.",
       "version": "1.14.0",
       "keywords": [
         "rules",

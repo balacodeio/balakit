@@ -22,7 +22,7 @@
 - Release workflow path(s): `.github/workflows/ci.yml`, `.github/workflows/release.yml`
 - Trigger: push/PR to `master` or `staging` (CI); git tag `v*` (release + npm publish)
 - Workflow to watch after pushing a tag: `.github/workflows/release.yml` (creates the GitHub Release and runs `npm publish`). Do **not** also `gh release create` or `npm publish` locally — that duplicates the tag workflow.
-- Repo secret required: `NPM_TOKEN` (npm publish). `GITHUB_TOKEN` is provided by Actions.
+- Repo secret required: `NPM_TOKEN` (npm **Automation** token — must bypass 2FA). `GITHUB_TOKEN` is provided by Actions.
 
 ## Deploy targets
 

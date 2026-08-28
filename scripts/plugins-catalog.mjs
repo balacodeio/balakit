@@ -26,10 +26,10 @@ export const PLUGINS = [
   {
     name: "balakit-core",
     description:
-      "Standing project rules: meta-principle, testing, comments, and changelog discipline.",
+      "Standing project rules: meta-principle, testing, comments, changelog, and release version lockstep.",
     keywords: ["rules", "coding-standards", "agents-md", "balakit"],
     format: "cursor",
-    rules: ["base", "testing", "comments", "changelog"],
+    rules: ["base", "testing", "comments", "changelog", "release"],
     skills: [],
   },
   {

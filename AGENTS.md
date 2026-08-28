@@ -200,6 +200,38 @@ When documentation strings are generated into a public API surface (OpenAPI/Swag
 - Map each endpoint/handler summary to the generated summary and description.
 - Declare at least one example response for each public route.
 
+<!-- from rules/release.mdc -->
+## Release version lockstep
+
+**One version.** The git tag, `package.json` `"version"`, CHANGELOG heading, and npm publish are the same semver. Never tag or publish a version that is not already committed in `package.json`.
+
+### Identity
+
+| Surface | Form | Example |
+|---------|------|---------|
+| `package.json` `"version"` | no leading `v` | `1.14.0` or `1.15.0-beta.1` |
+| git tag | `v` + that string | `v1.14.0` or `v1.15.0-beta.1` |
+| CHANGELOG heading | `## [vX.Y.Z]` (or without `v`) | `## [v1.14.0]` |
+| npm | that same `package.json` version | `balakit@1.14.0` (`latest`) or dist-tag `beta` |
+
+Plugin / marketplace `version` fields lockstep with `package.json`. Skill `SKILL.md` `version:` does not. Bump `package.json` only, then `./sync.sh`. Never hand-edit generated plugin versions.
+
+### Order
+
+1. Cut CHANGELOG `[Unreleased]` into `## [vX.Y.Z]`.
+2. Set `package.json` `"version"` to `X.Y.Z` (no `v`).
+3. `./sync.sh` then `npm test` and `node scripts/check-lockstep.mjs --rebuild --git`.
+4. Commit. Tag that commit: `git tag -a vX.Y.Z -m "vX.Y.Z"`.
+5. Push the tag only after the commit is on the release branch. The `v*` workflow creates the GitHub Release and runs `npm publish`. Do **not** also `gh release create` or `npm publish` locally — that duplicates the tag and can publish a different version than the tag.
+
+If the tag workflow fails after the GitHub Release exists, do not publish a different version locally to "catch up." Fix the secret/token, then re-run the same tag job (make `gh release create` a no-op if the release already exists).
+
+### npm auth
+
+GitHub Actions `NPM_TOKEN` must be an npm **Automation** token (bypasses 2FA). Publish/classic tokens fail CI with `EOTP`.
+
+Procedure: `release-deploy` skill + `skills/release-deploy/projects/<owner>-<repo>.md`.
+
 <!-- from rules/testing.mdc -->
 ## Testing
 

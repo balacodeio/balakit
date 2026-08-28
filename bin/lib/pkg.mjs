@@ -68,7 +68,7 @@ export function canonicalizeRuleNames(names) {
 }
 
 /** Default team kit installed by `balakit init`. */
-export const TEAM_INIT_RULES = ["base", "testing", "comments", "changelog"];
+export const TEAM_INIT_RULES = ["base", "testing", "comments", "changelog", "release"];
 
 /** Manifest schema version for ownership ledger. */
 export const MANIFEST_SCHEMA = 2;
