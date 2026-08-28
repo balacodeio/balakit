@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changes
+- Paste-into-agent prompt uses native Agent Plugins marketplace install when the client supports it. Dropped leftover-Mental cleanup from the install prompt (does not apply to most users).
+
 ## [v1.15.0]
 
 ### Features

@@ -40,40 +40,48 @@ Node `>=18`. Preview with `--dry-run`. `-y` skips confirms.
 
 ### Paste this into your agent
 
-Works in Cursor, Claude Code, Copilot, Codex, OpenCode, and anything that can run a shell:
+Works in Cursor, Claude Code, Copilot, Codex, OpenCode, and anything that can install a plugin or run a shell:
 
 ```text
 Install Balakit from https://github.com/afaraha8403/balakit (npm package: balakit).
 
-Balakit is an opinionated rules + skills kit for AI coding agents. Standing rules go AGENTS.md-first (plus CLAUDE.md and Cursor .mdc). Skills go through skills.sh. Domain plugins copy to ~/.cursor/plugins/local/ on user-scope install.
+Balakit is an opinionated rules + skills kit. Standing rules go AGENTS.md-first (plus CLAUDE.md and Cursor .mdc). Skills are Agent Skills. Domain groups ship as Agent Plugins 1.0.0 packages (https://agent-plugins.org/specification).
 
-Mental continuity is a separate product. Keep Mental. Do not delete ~/.mental, ~/.cursor/rules/mental.mdc, skills named mental, or ~/.cursor/plugins/local/mental. Do not run `balakit remove mental` expecting files to disappear — that flag only prints https://github.com/afaraha8403/mental.
+This repo is a marketplace, not a single root plugin.json. Do not /add-plugin the repo root. Portable packages live under plugins/:
+- Skill plugins: balakit-engineering, balakit-marketing, balakit-media, balakit-nlm, balakit-seo-skills (each has plugin.json + skills/)
+- Cursor also ships balakit-core and balakit-seo (rules) via .cursor-plugin/marketplace.json (pluginRoot: plugins)
+Manifests: .cursor-plugin/marketplace.json · .claude-plugin/marketplace.json · .agents/plugins/marketplace.json
 
-Cleanup leftover Balakit 1.x Mental wiring only:
-- If ~/.balakit/installed.json lists rule/skill "mental" from an old kit, delete that ledger (or strip the mental entries). Mental's own files stay.
-- Remove stale leftover skill dirs from old global installs if they are not Mental: nlm-skill, release-deploy under ~/.cursor/skills, ~/.claude/skills, ~/.agents/skills (release-deploy now lives inside the balakit-engineering plugin). Keep Cloudflare / other non-Balakit plugins.
+Ask me: this repo (--scope project, default) or this machine (--scope user).
 
-Ask me: this repo (--scope project, default) or this machine (--scope user). Then:
+If this client can install plugins natively, do that FIRST. Native install loads the skill packages; it does not write AGENTS.md standing rules.
 
-  npx balakit@latest status
-  npx balakit@latest init --scope <project|user> -y --agents <detected or cursor,claude-code,opencode,codex,copilot>
+  Cursor: do not /add-plugin the repo URL. User-scope CLI copies plugins to ~/.cursor/plugins/local/. Or add marketplace https://github.com/afaraha8403/balakit from Customize → Plugins, enable the plugins, reload the window.
+  Claude Code: /plugin marketplace add afaraha8403/balakit
+               then /plugin install <name>@balakit for: balakit-engineering, balakit-marketing, balakit-media, balakit-nlm, balakit-seo-skills
+  Codex:       codex plugin marketplace add afaraha8403/balakit
+               then `codex plugin add <name>@balakit` for the same five names
+  Copilot CLI: copilot plugin marketplace add afaraha8403/balakit
+               then `copilot plugin install <name>@balakit` for the same five names
+  VS Code:     Command Palette → Chat: Install Plugin From Source wants a single plugin.json. Point it at a plugins/balakit-* folder, or skip and use the CLI below.
 
-init writes team rules (base, testing, comments, changelog, release). User scope also copies plugins/balakit-* into ~/.cursor/plugins/local/ beside Mental. It does not install skills.
+Then always write standing rules (`init` does not run skills.sh):
 
-Then install all kit skills for the agents I named:
+  npx balakit@latest init --scope <project|user> -y
 
-  npx balakit@latest add authoring-skills-and-rules cloakbrowser-fallback deep-deliberation dissect documentation-writer release-deploy everything-seo seo-audit marketing-psychology startup-marketing-brain media-gen nlm-skill --scope <project|user> --agents <same agents> -y
+If native plugin install already loaded the five skill plugins, skip the next add. If this client has no plugin install, or native failed:
 
-Do not also npm publish or gh release create. After install, run `npx balakit@latest status`, tell me what it reports, and remind me to reload Cursor if plugins/local changed. Customize → User Rules is account UI — the CLI cannot write it.
+  npx balakit@latest add authoring-skills-and-rules cloakbrowser-fallback deep-deliberation dissect documentation-writer release-deploy everything-seo seo-audit marketing-psychology startup-marketing-brain media-gen nlm-skill --scope <project|user> --agents <detected or cursor,claude-code,opencode,codex,copilot> -y
+
+Do not npm publish or gh release create. Run `npx balakit@latest status`, tell me what it reports, and remind me to reload Cursor if plugins/local or the plugin UI changed. Customize → User Rules is account UI — the CLI cannot write it.
 ```
 
 ## Highlights
 
 - **Two scopes.** `--scope project` (this repo) vs `--scope user` (this machine, all projects).
 - **Rules ≠ skills.** `init` = standing rules. `add <skill>` = skills.sh (`-g` on user scope).
-- **Cursor plugins are copies.** User-scope install writes `~/.cursor/plugins/local/balakit-*` so they survive `npx` cache eviction. Reload the window, then check Customize.
+- **Native plugins when the client supports them.** Marketplace manifests ship in-repo. Cursor: `~/.cursor/plugins/local/` (CLI copy) or add the GitHub marketplace. Claude / Codex / Copilot: marketplace add `afaraha8403/balakit`, then install the five skill plugins. Standing rules still come from `balakit init`.
 - **One version when you ship.** Git tag `vX.Y.Z`, `package.json` `"version"`, CHANGELOG heading, and npm publish are the same semver (`release` rule).
-- **Mental moved out.** Continuity lives in [@balacode/mental](https://www.npmjs.com/package/@balacode/mental). Balakit does not own `~/.mental`.
 
 ## Scopes
 
@@ -109,7 +117,7 @@ npm install -g balakit
 balakit init
 ```
 
-`--agents <ids|all>` selects skills.sh targets (default: detect). `--personal` is **not** user scope — leftover Mental flag; it prints the Mental URL and exits. Same for `doctor` and `--mental-*`.
+`--agents <ids|all>` selects skills.sh targets (default: detect). `--personal`, `doctor`, and `--mental-*` are leftover flags: they print a URL and exit.
 
 ## Destinations
 
@@ -147,20 +155,25 @@ npx skills add afaraha8403/balakit --skill dissect
 | `balakit-nlm` | `nlm-skill` | Agent Plugins + Cursor |
 | `balakit-engineering` | `authoring-skills-and-rules`, `cloakbrowser-fallback`, `deep-deliberation`, `dissect`, `documentation-writer`, `release-deploy` | Agent Plugins + Cursor |
 
-Rules are **not** stuffed into Agent Plugins `extensions`. Every plugin `version` equals `package.json`. Skill `SKILL.md` `version:` stays independent.
+Rules are **not** a portable Agent Plugins v1 component (they stay in Cursor plugins + `AGENTS.md`). Every plugin `version` equals `package.json`. Skill `SKILL.md` `version:` stays independent.
 
-Cursor public marketplace: do **not** submit from a routine change. When you are ready, `./sync.sh` then follow [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
-
-## Mental (moved)
-
-Continuity is **[Mental](https://github.com/afaraha8403/mental)**, not Balakit.
+Native marketplace add:
 
 ```bash
-npm i -g @balacode/mental
-mental install
+# Claude Code (in chat)
+/plugin marketplace add afaraha8403/balakit
+/plugin install balakit-engineering@balakit
+
+# Codex
+codex plugin marketplace add afaraha8403/balakit
+codex plugin add balakit-engineering@balakit
+
+# GitHub Copilot CLI
+copilot plugin marketplace add afaraha8403/balakit
+copilot plugin install balakit-engineering@balakit
 ```
 
-Journals in `~/.mental` were not deleted when Mental left this kit. Keep them.
+Cursor public marketplace: do **not** submit from a routine change. When you are ready, `./sync.sh` then follow [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
 
 ## Rules
 
@@ -196,10 +209,10 @@ Journals in `~/.mental` were not deleted when Mental left this kit. Keep them.
 This repo only → `--scope project` (default). Every project on this PC → `--scope user`. User scope also copies Cursor plugins.
 
 **Why didn’t skills show up after `init`?**
-`init` writes standing rules (and user-scope plugins). Run `balakit add <skills> --scope … --agents …`.
+`init` writes standing rules (and user-scope Cursor plugin copies). Skills come from native plugin install **or** `balakit add <skills> --scope … --agents …`.
 
-**Will install wipe Mental?**
-No, if you follow the paste prompt. Do not delete Mental files. `balakit remove mental` does not delete them; it prints the Mental URL.
+**Does native plugin install replace the CLI?**
+No. Plugins load skills (and Cursor plugins can load rules). `balakit init` still writes the AGENTS.md / CLAUDE.md standing kit. Skip `balakit add` only when this client already loaded the five skill plugins.
 
 **Customize → User Rules is empty.**
 That UI is Cursor account settings, not files. The CLI writes `~/.cursor/rules/*.mdc` and `~/.cursor/plugins/local/`. Reload the window.
