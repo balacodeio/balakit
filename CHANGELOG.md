@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.14.0]
+
 ### Features
 - `--scope project|user` installs standing rules and skills to this repo or this machine (do not reuse `--personal`).
 - Always-on rules write `.cursor/rules/*.mdc`; user scope writes `~/.cursor/rules`, `~/.claude`, `~/.codex`, `~/.config/opencode`, and copies plugins to `~/.cursor/plugins/local/`.
@@ -17,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 - Agent Plugins root `plugin.json` is schema-validated at build (closed 1.0.0 schema). Skill `SKILL.md` versions stay independent of the kit version.
+- Repository moved from the `balacodeio` GitHub organization to `afaraha8403/balakit`. Install commands (`npx skills add afaraha8403/balakit`) and package metadata now point at the personal account. The npm package name `balakit` and npm owner are unchanged; old GitHub URLs redirect.
 
 ## [v1.13.0]
 

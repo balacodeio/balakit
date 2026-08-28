@@ -121,9 +121,9 @@ Delegated to skills.sh (path maps stay theirs). Balakit adds `-g` for user
 scope and does not treat `.agents` as Cursor’s only branded path.
 
 ```bash
-npx skills add balacodeio/balakit
-npx skills add balacodeio/balakit -g
-npx skills add balacodeio/balakit --skill dissect
+npx skills add afaraha8403/balakit
+npx skills add afaraha8403/balakit -g
+npx skills add afaraha8403/balakit --skill dissect
 ```
 
 `balakit add <skill>` runs the equivalent. Skills failures exit non-zero

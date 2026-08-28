@@ -33,7 +33,7 @@ Mental continuity has moved to ${MENTAL_REPO}
 (\`doctor\`, \`--personal\`, and \`--mental-*\` flags print the new location.)
 
 Skills are installed via skills.sh. Direct path:
-  npx skills add balacodeio/balakit
+  npx skills add afaraha8403/balakit
 
 Available rules: ${rules.map((r) => r.name).join(", ")}
 `;

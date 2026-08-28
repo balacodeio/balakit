@@ -1,14 +1,14 @@
 {
   "name": "balakit-marketing",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Startup marketing and conversion psychology skills for distribution and monetization.",
   "author": {
     "name": "Ali Farahat",
     "email": "ali@balacode.io",
     "url": "https://balacode.io"
   },
-  "homepage": "https://github.com/balacodeio/balakit#readme",
-  "repository": "https://github.com/balacodeio/balakit",
+  "homepage": "https://github.com/afaraha8403/balakit#readme",
+  "repository": "https://github.com/afaraha8403/balakit",
   "license": "MIT",
   "keywords": [
     "marketing",

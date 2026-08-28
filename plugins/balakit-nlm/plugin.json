@@ -1,15 +1,15 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "balakit-nlm",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "NotebookLM CLI and MCP expert skill for research, notebooks, and content generation.",
   "author": {
     "name": "Ali Farahat",
     "email": "ali@balacode.io",
     "url": "https://balacode.io"
   },
-  "homepage": "https://github.com/balacodeio/balakit#readme",
-  "repository": "https://github.com/balacodeio/balakit",
+  "homepage": "https://github.com/afaraha8403/balakit#readme",
+  "repository": "https://github.com/afaraha8403/balakit",
   "license": "MIT",
   "keywords": [
     "notebooklm",

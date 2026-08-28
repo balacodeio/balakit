@@ -1,14 +1,14 @@
 {
   "name": "balakit-seo",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Scoped seo-ai-search rule for Cursor (globs). Portable SEO skills ship in balakit-seo-skills.",
   "author": {
     "name": "Ali Farahat",
     "email": "ali@balacode.io",
     "url": "https://balacode.io"
   },
-  "homepage": "https://github.com/balacodeio/balakit#readme",
-  "repository": "https://github.com/balacodeio/balakit",
+  "homepage": "https://github.com/afaraha8403/balakit#readme",
+  "repository": "https://github.com/afaraha8403/balakit",
   "license": "MIT",
   "keywords": [
     "seo",

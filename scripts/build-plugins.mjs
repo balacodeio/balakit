@@ -33,11 +33,11 @@ const MARKETPLACE_DIR = join(ROOT, ".cursor-plugin");
 
 const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
 const VERSION = pkg.version;
-const HOMEPAGE = pkg.homepage ?? "https://github.com/balacodeio/balakit#readme";
+const HOMEPAGE = pkg.homepage ?? "https://github.com/afaraha8403/balakit#readme";
 const REPOSITORY =
   (pkg.repository?.url ?? "")
     .replace(/^git\+/, "")
-    .replace(/\.git$/, "") || "https://github.com/balacodeio/balakit";
+    .replace(/\.git$/, "") || "https://github.com/afaraha8403/balakit";
 const LICENSE = pkg.license ?? "MIT";
 
 const AUTHOR = {

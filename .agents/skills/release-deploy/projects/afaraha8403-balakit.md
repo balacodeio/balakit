@@ -1,4 +1,4 @@
-# Release config: balacodeio/balakit
+# Release config: afaraha8403/balakit
 
 ## Channels
 
@@ -36,7 +36,7 @@
 
 ### Production
 - Deploy destination: GitHub Release on `master` + npm `balakit@latest`
-- Public URL / how to verify: https://github.com/balacodeio/balakit/releases · https://www.npmjs.com/package/balakit
+- Public URL / how to verify: https://github.com/afaraha8403/balakit/releases · https://www.npmjs.com/package/balakit
 
 ## Artifacts
 
