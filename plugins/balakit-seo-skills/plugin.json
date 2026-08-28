@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "balakit-seo-skills",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "SEO and AI-search skills: everything-seo playbook and seo-audit workflow.",
   "author": {
     "name": "Ali Farahat",

@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "balakit-nlm",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "NotebookLM CLI and MCP expert skill for research, notebooks, and content generation.",
   "author": {
     "name": "Ali Farahat",

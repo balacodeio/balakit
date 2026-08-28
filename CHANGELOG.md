@@ -7,11 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.15.0]
+
 ### Features
 - Always-on `release` rule: git tag, CHANGELOG heading, `package.json` version, and npm publish must be the same semver. Included in the default team kit.
 
 ### Changes
 - README follows the Mental layout (BLUF, quick start, paste-into-agent prompt) and documents the real install path: `init` = rules (+ user-scope Cursor plugins); skills are a second `add`; leftover `balakit remove mental` does not delete files; keep Mental.
+- Tag workflow skips `gh release create` if that tag’s GitHub Release already exists, so npm publish retries do not require deleting the Release.
 
 ## [v1.14.0]
 
