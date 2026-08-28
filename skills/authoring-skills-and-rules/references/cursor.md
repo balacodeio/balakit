@@ -35,7 +35,10 @@ Interaction quirks:
 - **Project:** `.cursor/rules/*.mdc`.
 - **Nested:** subdirectories may hold their own `.cursor/rules`; deeper (more
   specific) instructions take precedence and combine with parents.
-- **User/global:** Cursor Settings → Rules (no frontmatter, all projects).
+- **User files:** `~/.cursor/rules/*.mdc` (same frontmatter as project). Balakit
+  `--scope user` writes these.
+- **Customize → User Rules:** account UI (Cursor Settings), **not files**.
+  Installers cannot write this surface.
 - **Team rules** (Team/Enterprise): dashboard-managed; take precedence over
   project rules.
 - **`AGENTS.md`:** plain-markdown alternative (no frontmatter), root or subdirs.
@@ -56,9 +59,22 @@ Interaction quirks:
 > No official numeric limit on `description` length or rule count; only the
 > "under 500 lines" guidance is explicit.
 
-## Skills (`.cursor/skills/*`)
+## Skills (`.cursor/skills/*` and `.agents/skills/*`)
 
-Cursor supports the same Agent Skills format (`SKILL.md`), installable via
-[skills.sh](https://skills.sh) (`npx skills add <repo>`), landing in
-`.cursor/skills/<name>/` (project) or `~/.cursor/skills/` (global, `-g`). Same
-`name` + `description` frontmatter rules as Claude Code apply.
+Cursor loads Agent Skills (`SKILL.md`) from **both** `.cursor/skills/<name>/`
+and `.agents/skills/<name>/` in a project, and from `~/.cursor/skills/` plus
+`~/.agents/skills/` for user-wide installs.
+
+[skills.sh](https://skills.sh) (`npx skills add <repo>`) still uses `.agents/skills`
+as the Cursor **project** target (not `.cursor/skills`). Balakit therefore
+symlinks `.cursor/skills/<name>` → `.agents/skills/<name>` after a project
+install. User `-g -a cursor` already lands in `~/.cursor/skills`.
+
+Same `name` + `description` frontmatter rules as Claude Code apply.
+
+## Local plugins (`~/.cursor/plugins/local/`)
+
+Cursor Customize lists plugins copied into `~/.cursor/plugins/local/<name>/`.
+Balakit `--scope user` copies generated `plugins/balakit-*` there (copies, not
+symlinks from the `npx` cache). Project-scope install does **not** write this
+folder. Customize → User Rules remains UI-only.

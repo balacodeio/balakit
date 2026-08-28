@@ -2,7 +2,9 @@
 /**
  * Materialize domain plugins under `plugins/` from `skills/` and `rules/`.
  *
- * Also writes `.cursor-plugin/marketplace.json` for Cursor multi-plugin repos.
+ * Also writes marketplace catalogs:
+ * `.cursor-plugin/marketplace.json`, `.claude-plugin/marketplace.json`,
+ * `.agents/plugins/marketplace.json`.
  * Invoked by sync.sh / sync.ps1 — edit the catalog and sources, not the output.
  */
 import {
@@ -21,6 +23,7 @@ import {
   MARKETPLACE_NAME,
   MARKETPLACE_OWNER,
 } from "./plugins-catalog.mjs";
+import { AGENT_PLUGIN_SCHEMA, assertAgentManifest } from "./plugin-schema.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const PLUGINS_DIR = join(ROOT, "plugins");
@@ -136,10 +139,45 @@ function baseMeta(plugin) {
  */
 function writeAgentManifest(pluginRoot, plugin) {
   const manifest = {
-    $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+    $schema: AGENT_PLUGIN_SCHEMA,
     ...baseMeta(plugin),
   };
+  assertAgentManifest(manifest, `${plugin.name}/plugin.json`);
   writeFileSync(join(pluginRoot, "plugin.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+/**
+ * Thin Codex native wrapper. Paths stay relative to the plugin root.
+ * @param {string} pluginRoot
+ * @param {import("./plugins-catalog.mjs").PluginDef} plugin
+ */
+function writeCodexManifest(pluginRoot, plugin) {
+  const dir = join(pluginRoot, ".codex-plugin");
+  mkdirSync(dir, { recursive: true });
+  const manifest = {
+    name: plugin.name,
+    version: VERSION,
+    description: plugin.description,
+    skills: "./skills/",
+  };
+  writeFileSync(join(dir, "plugin.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+/**
+ * Thin Claude Code marketplace wrapper.
+ * @param {string} pluginRoot
+ * @param {import("./plugins-catalog.mjs").PluginDef} plugin
+ */
+function writeClaudeManifest(pluginRoot, plugin) {
+  const dir = join(pluginRoot, ".claude-plugin");
+  mkdirSync(dir, { recursive: true });
+  const manifest = {
+    name: plugin.name,
+    version: VERSION,
+    description: plugin.description,
+    author: { name: AUTHOR.name, email: AUTHOR.email },
+  };
+  writeFileSync(join(dir, "plugin.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 /**
@@ -190,9 +228,12 @@ function buildPlugin(plugin) {
   // Cursor marketplace multi-plugin resolution looks for `.cursor-plugin/plugin.json`.
   writeCursorManifest(pluginRoot, plugin);
 
-  // Skills-only plugins also ship a portable Agent Plugins root manifest.
+  // Skills-only plugins also ship a portable Agent Plugins root manifest
+  // plus thin Codex / Claude wrappers around the same skills/ payload.
   if (plugin.format === "agent") {
     writeAgentManifest(pluginRoot, plugin);
+    writeCodexManifest(pluginRoot, plugin);
+    writeClaudeManifest(pluginRoot, plugin);
   }
 
   const readmeLines = [
@@ -210,31 +251,77 @@ function buildPlugin(plugin) {
   writeFileSync(join(pluginRoot, "README.md"), readmeLines.filter((line) => line !== null).join("\n"));
 }
 
-/**
- * Write the Cursor multi-plugin marketplace manifest at repo root.
- */
 function writeMarketplace() {
+  const owner = MARKETPLACE_OWNER;
+  const description =
+    "Opinionated rules and skills for AI coding agents, packaged as installable domain plugins.";
+  const entries = PLUGINS.map((plugin) => ({
+    name: plugin.name,
+    source: plugin.name,
+    description: plugin.description,
+    version: VERSION,
+    keywords: plugin.keywords,
+  }));
+
   mkdirSync(MARKETPLACE_DIR, { recursive: true });
-  const marketplace = {
-    name: MARKETPLACE_NAME,
-    owner: MARKETPLACE_OWNER,
-    metadata: {
-      description:
-        "Opinionated rules and skills for AI coding agents, packaged as installable domain plugins.",
-      version: VERSION,
-      pluginRoot: "plugins",
-    },
-    plugins: PLUGINS.map((plugin) => ({
-      name: plugin.name,
-      source: plugin.name,
-      description: plugin.description,
-      version: VERSION,
-      keywords: plugin.keywords,
-    })),
-  };
   writeFileSync(
     join(MARKETPLACE_DIR, "marketplace.json"),
-    `${JSON.stringify(marketplace, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        name: MARKETPLACE_NAME,
+        owner,
+        metadata: { description, version: VERSION, pluginRoot: "plugins" },
+        plugins: entries,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  const agentPlugins = PLUGINS.filter((p) => p.format === "agent");
+  mkdirSync(join(ROOT, ".claude-plugin"), { recursive: true });
+  writeFileSync(
+    join(ROOT, ".claude-plugin", "marketplace.json"),
+    `${JSON.stringify(
+      {
+        name: MARKETPLACE_NAME,
+        owner,
+        metadata: { description, version: VERSION },
+        plugins: agentPlugins.map((p) => ({
+          name: p.name,
+          source: `./plugins/${p.name}`,
+          description: p.description,
+          version: VERSION,
+        })),
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  mkdirSync(join(ROOT, ".agents", "plugins"), { recursive: true });
+  writeFileSync(
+    join(ROOT, ".agents", "plugins", "marketplace.json"),
+    `${JSON.stringify(
+      {
+        name: MARKETPLACE_NAME,
+        metadata: { description, version: VERSION },
+        plugins: agentPlugins.map((p) => ({
+          name: p.name,
+          source: { path: `./plugins/${p.name}` },
+          description: p.description,
+          version: VERSION,
+          interface: {
+            displayName: p.name
+              .split("-")
+              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(" "),
+          },
+        })),
+      },
+      null,
+      2,
+    )}\n`,
   );
 }
 
@@ -275,8 +362,9 @@ export function buildPlugins() {
       "",
       "Regenerate: `node scripts/build-plugins.mjs` (also run by `./sync.sh`).",
       "",
-      "The `balakit` CLI continues to install rules into `AGENTS.md` / `CLAUDE.md` and",
-      "skills via skills.sh for multi-agent setups.",
+      "The `balakit` CLI installs rules into AGENTS.md / CLAUDE.md / `.cursor/rules`",
+      "and skills via skills.sh (`--scope project|user`). Plugins are the portable",
+      "Agent Plugins 1.0.0 packages (plus Cursor / Codex / Claude marketplace wrappers).",
       "",
     ].join("\n"),
   );
@@ -291,6 +379,6 @@ const isMain =
 if (isMain) {
   const { pluginCount, skillCount, ruleCount } = buildPlugins();
   console.log(
-    `Built ${pluginCount} plugins (${skillCount} skills, ${ruleCount} rules) -> plugins/ + .cursor-plugin/marketplace.json`,
+    `Built ${pluginCount} plugins (${skillCount} skills, ${ruleCount} rules) -> plugins/ + marketplace manifests`,
   );
 }

@@ -20,6 +20,7 @@ Usage:
   npx ${CMD} update                  Refresh installed kit pieces
 
 Options:
+  --scope project|user   Install to this repo (default) or this machine
   --agents <ids|all>     Skills targets (default: detect + confirm in wizard)
   --dry-run              Preview without writing
   -y, --yes              Skip confirms
@@ -60,6 +61,7 @@ export function parseArgv(argv) {
     agents: undefined,
     dryRun: false,
     yes: false,
+    scope: "project",
     personal: false,
     withPersonal: false,
     mentalTooling: undefined,
@@ -99,6 +101,12 @@ export function parseArgv(argv) {
       args.mentalDataPolicy = next() ?? "";
     } else if (a === "--lift-ignore") {
       args.liftIgnore = true;
+    } else if (a === "--scope") {
+      const v = next();
+      if (v !== "project" && v !== "user") {
+        throw new Error(`--scope must be project or user (got ${v ?? "(missing)"})`);
+      }
+      args.scope = v;
     } else if (a === "--agents") {
       const v = next();
       args.agents = v === "all" ? [...AGENT_IDS] : csv(v);

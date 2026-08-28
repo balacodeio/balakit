@@ -1,0 +1,20 @@
+{
+  "name": "balakit-seo-skills",
+  "version": "1.13.0",
+  "description": "SEO and AI-search skills: everything-seo playbook and seo-audit workflow.",
+  "author": {
+    "name": "Ali Farahat",
+    "email": "ali@balacode.io",
+    "url": "https://balacode.io"
+  },
+  "homepage": "https://github.com/balacodeio/balakit#readme",
+  "repository": "https://github.com/balacodeio/balakit",
+  "license": "MIT",
+  "keywords": [
+    "seo",
+    "geo",
+    "structured-data",
+    "audit",
+    "balakit"
+  ]
+}

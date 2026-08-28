@@ -1,0 +1,6 @@
+{
+  "name": "balakit-nlm",
+  "version": "1.13.0",
+  "description": "NotebookLM CLI and MCP expert skill for research, notebooks, and content generation.",
+  "skills": "./skills/"
+}

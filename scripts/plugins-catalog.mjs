@@ -35,10 +35,19 @@ export const PLUGINS = [
   {
     name: "balakit-seo",
     description:
-      "SEO and AI-search: scoped seo-ai-search rule plus everything-seo and seo-audit skills.",
-    keywords: ["seo", "geo", "structured-data", "audit", "balakit"],
+      "Scoped seo-ai-search rule for Cursor (globs). Portable SEO skills ship in balakit-seo-skills.",
+    keywords: ["seo", "geo", "structured-data", "cursor", "balakit"],
     format: "cursor",
     rules: ["seo-ai-search"],
+    skills: [],
+  },
+  {
+    name: "balakit-seo-skills",
+    description:
+      "SEO and AI-search skills: everything-seo playbook and seo-audit workflow.",
+    keywords: ["seo", "geo", "structured-data", "audit", "balakit"],
+    format: "agent",
+    rules: [],
     skills: ["everything-seo", "seo-audit"],
   },
   {

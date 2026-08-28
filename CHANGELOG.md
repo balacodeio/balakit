@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Features
+- `--scope project|user` installs standing rules and skills to this repo or this machine (do not reuse `--personal`).
+- Always-on rules write `.cursor/rules/*.mdc`; user scope writes `~/.cursor/rules`, `~/.claude`, `~/.codex`, `~/.config/opencode`, and copies plugins to `~/.cursor/plugins/local/`.
+- Project skill installs symlink `.cursor/skills/<name>` → `.agents/skills/<name>` after skills.sh.
+- `seo-ai-search` also writes Claude (`.claude/rules`, `paths:`) and Copilot (`.github/instructions`, `applyTo`) twins when those agents are selected.
+- SEO split: `balakit-seo` (Cursor rule) and `balakit-seo-skills` (Agent Plugins + Cursor twin), plus Codex/Claude thin marketplace wrappers.
+- GitHub Actions CI lockstep (plugin versions = `package.json`) and tag-triggered GitHub Release + npm publish.
+
+### Changes
+- Agent Plugins root `plugin.json` is schema-validated at build (closed 1.0.0 schema). Skill `SKILL.md` versions stay independent of the kit version.
+
 ## [v1.13.0]
 
 ### Fixes

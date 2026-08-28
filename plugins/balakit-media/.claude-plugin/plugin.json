@@ -1,0 +1,9 @@
+{
+  "name": "balakit-media",
+  "version": "1.13.0",
+  "description": "Fal.ai media generation skill for images, video, upscale, and ad creative workflows.",
+  "author": {
+    "name": "Ali Farahat",
+    "email": "ali@balacode.io"
+  }
+}

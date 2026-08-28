@@ -126,8 +126,38 @@ test("removeTeamRules rewrites remaining rules", () => {
   installTeamRules([sampleAlways, sampleScoped], { cwd });
   removeTeamRules([sampleScoped], [sampleAlways], { cwd });
   assert.equal(existsSync(join(cwd, ".cursor", "rules", "seo-ai-search.mdc")), false);
+  assert.ok(existsSync(join(cwd, ".cursor", "rules", "base.mdc")));
   assert.match(readFileSync(join(cwd, "AGENTS.md"), "utf8"), /Do the right thing/);
   assert.doesNotMatch(readFileSync(join(cwd, "AGENTS.md"), "utf8"), /Ship meta tags/);
+});
+
+test("installTeamRules writes always-on rules to .cursor/rules/*.mdc", () => {
+  installTeamRules([sampleAlways], { cwd });
+  const mdc = join(cwd, ".cursor", "rules", "base.mdc");
+  assert.ok(existsSync(mdc));
+  assert.match(readFileSync(mdc, "utf8"), /Do the right thing/);
+});
+
+test("installTeamRules writes Claude and Copilot twins for scoped rules", async () => {
+  const { writeScopedTwins, renderClaudeRule, renderCopilotInstructions } = await import(
+    "../bin/lib/rule-adapters.mjs"
+  );
+  installTeamRules([sampleScoped], { cwd, agents: ["claude-code", "copilot"] });
+  const claude = join(cwd, ".claude", "rules", "seo-ai-search.md");
+  const copilot = join(cwd, ".github", "instructions", "seo-ai-search.instructions.md");
+  assert.ok(existsSync(claude));
+  assert.ok(existsSync(copilot));
+  assert.match(readFileSync(claude, "utf8"), /^paths:/m);
+  assert.match(readFileSync(copilot, "utf8"), /applyTo:/);
+  const twins = writeScopedTwins(sampleScoped, { cwd, agents: ["claude-code"], dryRun: true });
+  assert.ok(twins.written.length);
+  assert.match(renderClaudeRule(sampleScoped), /paths:/);
+  assert.match(renderCopilotInstructions(sampleScoped), /applyTo:/);
+});
+
+test("installPersonalRules writes OpenCode global AGENTS.md", () => {
+  installPersonalRules([sampleNotes], { home });
+  assert.ok(hasManagedBlock(join(home, ".config", "opencode", "AGENTS.md")));
 });
 
 test("installPersonalRules writes user-level targets", () => {

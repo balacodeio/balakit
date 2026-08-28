@@ -22,7 +22,7 @@ export {
   resolveSkillsShTargets,
   SKILLS_SH_VERIFIED_IDS,
 } from "./lib/skills-bridge.mjs";
-export { installTeamRules, installPersonalRules, partitionRules } from "./lib/rules-install.mjs";
+export { installTeamRules, installPersonalRules, installUserRules, partitionRules } from "./lib/rules-install.mjs";
 export {
   detectAgents,
   AGENTS,
@@ -72,6 +72,7 @@ async function main() {
     agents: args.agents,
     dryRun: args.dryRun,
     yes: args.yes,
+    scope: args.scope,
   };
 
   let code = 0;
@@ -98,10 +99,10 @@ async function main() {
       code = await cmdAdd({ ...common, names: args.names });
       break;
     case "remove":
-      code = await cmdRemove({ dryRun: args.dryRun, yes: args.yes, names: args.names });
+      code = await cmdRemove({ ...common, names: args.names });
       break;
     case "update":
-      code = await cmdUpdate({ dryRun: args.dryRun, yes: args.yes, agents: args.agents });
+      code = await cmdUpdate({ dryRun: args.dryRun, yes: args.yes, agents: args.agents, scope: args.scope });
       break;
     case null:
       code = await cmdInteractive(common);

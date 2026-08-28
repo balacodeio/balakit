@@ -25,7 +25,20 @@
     {
       "name": "balakit-seo",
       "source": "balakit-seo",
-      "description": "SEO and AI-search: scoped seo-ai-search rule plus everything-seo and seo-audit skills.",
+      "description": "Scoped seo-ai-search rule for Cursor (globs). Portable SEO skills ship in balakit-seo-skills.",
+      "version": "1.13.0",
+      "keywords": [
+        "seo",
+        "geo",
+        "structured-data",
+        "cursor",
+        "balakit"
+      ]
+    },
+    {
+      "name": "balakit-seo-skills",
+      "source": "balakit-seo-skills",
+      "description": "SEO and AI-search skills: everything-seo playbook and seo-audit workflow.",
       "version": "1.13.0",
       "keywords": [
         "seo",

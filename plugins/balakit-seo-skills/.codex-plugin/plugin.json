@@ -1,0 +1,6 @@
+{
+  "name": "balakit-seo-skills",
+  "version": "1.13.0",
+  "description": "SEO and AI-search skills: everything-seo playbook and seo-audit workflow.",
+  "skills": "./skills/"
+}

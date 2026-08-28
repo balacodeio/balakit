@@ -8,7 +8,7 @@ import { CMD, VERSION, PERSONAL_RULES, canonicalizeRuleName } from "../lib/pkg.m
 import { loadRules, loadSkills } from "../lib/catalog.mjs";
 import {
   removeTeamRules,
-  removePersonalRules,
+  removeUserRules,
   partitionRules,
 } from "../lib/rules-install.mjs";
 import { skillsRemoveCommand, runSkillsCmd } from "../lib/skills-bridge.mjs";
@@ -20,15 +20,17 @@ import {
   isCorruptManifest,
 } from "../lib/manifest.mjs";
 import { hasManagedBlock } from "../lib/render.mjs";
+import { unlinkCursorProjectSkills } from "../lib/cursor-native.mjs";
 
 /**
- * @param {{ names: string[], dryRun?: boolean, yes?: boolean }} opts
+ * @param {{ names: string[], dryRun?: boolean, yes?: boolean, scope?: "project"|"user" }} opts
  */
 export async function cmdRemove(opts) {
   const allRules = loadRules();
   const allSkills = loadSkills();
   const ruleSet = new Set(allRules.map((r) => r.name));
   const skillSet = new Set(allSkills.map((s) => s.name));
+  const scope = opts.scope === "user" ? "user" : "project";
 
   if (!opts.names?.length) {
     console.error("Usage: balakit remove <rule-or-skill>...");
@@ -47,10 +49,12 @@ export async function cmdRemove(opts) {
     }
   }
 
-  p.intro(`${CMD} v${VERSION} — remove${opts.dryRun ? "  [dry-run]" : ""}`);
+  p.intro(`${CMD} v${VERSION} — remove (${scope})${opts.dryRun ? "  [dry-run]" : ""}`);
 
   const selected = allRules.filter((r) => ruleNames.includes(r.name));
   const { personal, team } = partitionRules(selected);
+  const userRules = scope === "user" ? selected : personal;
+  const projectRules = scope === "user" ? [] : team;
 
   const proj = readManifest(projectManifestPath());
   const glob = readManifest(globalManifestPath());
@@ -66,8 +70,8 @@ export async function cmdRemove(opts) {
       !PERSONAL_RULES.includes(r.name),
   );
 
-  if (team.length && remainingTeam.length === 0 && liveTeamBlock) {
-    const manifestKnowsTeam = team.every((r) => proj.rules.includes(r.name));
+  if (projectRules.length && remainingTeam.length === 0 && liveTeamBlock) {
+    const manifestKnowsTeam = projectRules.every((r) => proj.rules.includes(r.name));
     if (isCorruptManifest(proj) || !proj.rules.length || !manifestKnowsTeam) {
       p.log.error(
         "Refusing to wipe AGENTS.md/CLAUDE.md managed blocks: manifest is missing, corrupt, or out of sync with live files.\n" +
@@ -77,16 +81,14 @@ export async function cmdRemove(opts) {
       return 1;
     }
   }
-  const remainingPersonal = allRules.filter(
-    (r) =>
-      glob.rules.includes(r.name) &&
-      !ruleNames.includes(r.name) &&
-      PERSONAL_RULES.includes(r.name),
+  const remainingUser = allRules.filter(
+    (r) => glob.rules.includes(r.name) && !ruleNames.includes(r.name),
   );
 
   const lines = [];
-  if (team.length) lines.push(`Project rules: ${team.map((r) => r.name).join(", ")}`);
-  if (personal.length) lines.push(`User-wide rules: ${personal.map((r) => r.name).join(", ")}`);
+  lines.push(`Scope: ${scope}`);
+  if (projectRules.length) lines.push(`Project rules: ${projectRules.map((r) => r.name).join(", ")}`);
+  if (userRules.length) lines.push(`User-wide rules: ${userRules.map((r) => r.name).join(", ")}`);
   if (skillNames.length) lines.push(`Skills: ${skillNames.join(", ")}`);
   p.note(lines.join("\n") || "Nothing to remove", "Remove");
 
@@ -100,22 +102,23 @@ export async function cmdRemove(opts) {
 
   let failed = false;
 
-  if (team.length) {
-    const r = removeTeamRules(team, remainingTeam, { dryRun: opts.dryRun });
+  if (projectRules.length) {
+    const r = removeTeamRules(projectRules, remainingTeam, { dryRun: opts.dryRun });
     if (r.removed.length) p.note(r.removed.join("\n"), opts.dryRun ? "Would remove" : "Removed");
     if (r.written.length) p.note(r.written.join("\n"), opts.dryRun ? "Would rewrite" : "Rewrote");
-    if (!opts.dryRun) recordRemove("project", { rules: team.map((x) => x.name) });
+    if (!opts.dryRun) recordRemove("project", { rules: projectRules.map((x) => x.name) });
   }
 
-  if (personal.length) {
-    const r = removePersonalRules(personal, remainingPersonal, { dryRun: opts.dryRun });
+  if (userRules.length) {
+    const r = removeUserRules(userRules, remainingUser, { dryRun: opts.dryRun });
     if (r.removed.length) p.note(r.removed.join("\n"), opts.dryRun ? "Would remove" : "Removed");
     if (r.written.length) p.note(r.written.join("\n"), opts.dryRun ? "Would rewrite" : "Rewrote");
-    if (!opts.dryRun) recordRemove("global", { rules: personal.map((x) => x.name) });
+    if (!opts.dryRun) recordRemove("global", { rules: userRules.map((x) => x.name) });
   }
 
   if (skillNames.length) {
-    const cmd = skillsRemoveCommand(skillNames, "project");
+    const skillScope = scope === "user" ? "global" : "project";
+    const cmd = skillsRemoveCommand(skillNames, skillScope);
     if (opts.dryRun) {
       p.log.step(`Would remove skills:\n${cmd}`);
     } else {
@@ -126,7 +129,11 @@ export async function cmdRemove(opts) {
         p.log.message(cmd);
         failed = true;
       } else {
-        recordRemove("project", { skills: skillNames });
+        recordRemove(skillScope === "global" ? "global" : "project", { skills: skillNames });
+        if (scope === "project") {
+          const unlinked = unlinkCursorProjectSkills(skillNames, { dryRun: opts.dryRun });
+          if (unlinked.length) p.note(unlinked.join("\n"), "Removed Cursor skill links");
+        }
       }
     }
   }

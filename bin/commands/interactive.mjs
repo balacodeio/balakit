@@ -16,6 +16,7 @@ import { detectAgents, AGENT_IDS, getCapability } from "../lib/agents.mjs";
  *   agents?: string[],
  *   dryRun?: boolean,
  *   yes?: boolean,
+ *   scope?: "project"|"user",
  * }} opts
  */
 export async function cmdInteractive(opts = {}) {
@@ -25,7 +26,7 @@ export async function cmdInteractive(opts = {}) {
   p.intro(`${CMD} v${VERSION} — guided setup${opts.dryRun ? "  [dry-run]" : ""}`);
 
   let intent = null;
-  if (opts.yes) intent = "team";
+  if (opts.yes) intent = opts.scope === "user" ? "user" : "team";
 
   if (!intent) {
     const picked = await p.select({
@@ -33,8 +34,13 @@ export async function cmdInteractive(opts = {}) {
       options: [
         {
           value: "team",
-          label: "Project standing rules",
-          hint: `${TEAM_INIT_RULES.join(", ")} → AGENTS.md + CLAUDE.md`,
+          label: "This repo — project standing rules",
+          hint: `${TEAM_INIT_RULES.join(", ")} → AGENTS.md + CLAUDE.md + .cursor/rules`,
+        },
+        {
+          value: "user",
+          label: "This machine — all projects",
+          hint: "User-wide ~/.cursor/rules, ~/.claude, ~/.codex, plugins/local",
         },
         {
           value: "advanced",
@@ -77,7 +83,7 @@ export async function cmdInteractive(opts = {}) {
   let ruleNames = [];
   let skillNames = [];
 
-  if (intent === "team") {
+  if (intent === "team" || intent === "user") {
     ruleNames = TEAM_INIT_RULES.filter((n) => allRules.some((r) => r.name === n));
   }
   if (intent === "advanced") {
@@ -107,11 +113,14 @@ export async function cmdInteractive(opts = {}) {
     skillNames = picked.filter((v) => v.startsWith("skill:")).map((v) => v.slice(6));
   }
 
+  const scope = intent === "user" ? "user" : intent === "team" ? "project" : (opts.scope ?? "project");
+
   const plan = buildInstallPlan({
     ruleNames,
     skillNames,
     allRules,
     agents: agentIds,
+    scope,
   });
 
   if (plan.bundled.length) {

@@ -20,11 +20,15 @@
     "rules",
     "plugins",
     ".cursor-plugin",
+    ".claude-plugin",
+    ".agents/plugins",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "plugins": "node scripts/build-plugins.mjs",
+    "lockstep": "node scripts/check-lockstep.mjs --rebuild --git"
   },
   "engines": {
     "node": ">=18"

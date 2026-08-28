@@ -12,6 +12,7 @@ import { cmdInteractive } from "./interactive.mjs";
  *   agents?: string[],
  *   dryRun?: boolean,
  *   yes?: boolean,
+ *   scope?: "project"|"user",
  * }} opts
  */
 export async function cmdInit(opts = {}) {
@@ -30,6 +31,7 @@ export async function cmdInit(opts = {}) {
     skillNames: [],
     allRules,
     agents: opts.agents,
+    scope: opts.scope,
   });
 
   const result = await runInstallPlan(plan, {

@@ -12,6 +12,7 @@ import { buildInstallPlan, runInstallPlan } from "../lib/install.mjs";
  *   agents?: string[],
  *   dryRun?: boolean,
  *   yes?: boolean,
+ *   scope?: "project"|"user",
  * }} opts
  */
 export async function cmdAdd(opts) {
@@ -45,6 +46,7 @@ export async function cmdAdd(opts) {
     allRules,
     agents: opts.agents,
     reconcile: true,
+    scope: opts.scope,
   });
 
   const result = await runInstallPlan(plan, {

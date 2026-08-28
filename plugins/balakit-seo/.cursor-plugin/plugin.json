@@ -1,7 +1,7 @@
 {
   "name": "balakit-seo",
   "version": "1.13.0",
-  "description": "SEO and AI-search: scoped seo-ai-search rule plus everything-seo and seo-audit skills.",
+  "description": "Scoped seo-ai-search rule for Cursor (globs). Portable SEO skills ship in balakit-seo-skills.",
   "author": {
     "name": "Ali Farahat",
     "email": "ali@balacode.io",
@@ -14,7 +14,7 @@
     "seo",
     "geo",
     "structured-data",
-    "audit",
+    "cursor",
     "balakit"
   ]
 }

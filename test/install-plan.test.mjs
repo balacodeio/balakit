@@ -80,6 +80,24 @@ const sampleTesting = {
   raw: "---\nalwaysApply: true\n---\n# Testing\n\nWrite real tests.\n",
 };
 
+test("buildInstallPlan user scope reconciles against global manifest", () => {
+  recordInstall("global", { rules: ["base"] }, { cwd, home });
+  const plan = buildInstallPlan({
+    ruleNames: ["testing"],
+    skillNames: [],
+    allRules: [sampleAlways, sampleTesting, sampleScoped],
+    agents: ["cursor"],
+    reconcile: true,
+    scope: "user",
+    cwd,
+    home,
+  });
+  assert.equal(plan.scope, "user");
+  assert.equal(plan.team.length, 0);
+  assert.ok(plan.personal.some((r) => r.name === "base"));
+  assert.ok(plan.personal.some((r) => r.name === "testing"));
+});
+
 test("buildInstallPlan reconciles add with existing manifest (no AGENTS shrink)", () => {
   installTeamRules([sampleAlways, sampleTesting], { cwd });
   recordInstall("project", { rules: ["base", "testing"] }, { cwd });
@@ -125,6 +143,13 @@ test("parseArgv still parses add of remaining rules", () => {
   assert.equal(a.command, "add");
   assert.deepEqual(a.names, ["base", "testing"]);
   assert.equal(a.yes, true);
+  assert.equal(a.scope, "project");
+});
+
+test("parseArgv accepts --scope user", () => {
+  const a = parseArgv(["add", "base", "--scope", "user"]);
+  assert.equal(a.scope, "user");
+  assert.throws(() => parseArgv(["init", "--scope", "galaxy"]), /project or user/);
 });
 
 test("detectAgents falls back to default trio", () => {

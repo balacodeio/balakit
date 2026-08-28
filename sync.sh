@@ -5,6 +5,7 @@
 #
 # Source of truth : skills/  rules/   (develop and iterate here)
 # Generated       : plugins/  .cursor-plugin/marketplace.json
+#                   .claude-plugin/marketplace.json  .agents/plugins/marketplace.json
 #
 # Skills mirror to every agent's skills directory (all of them auto-discover
 # SKILL.md from these): .cursor/  .claude/  .agents/.
